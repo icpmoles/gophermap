@@ -50,7 +50,7 @@ jobs:
             output="${output}/gophermap"
           fi
 
-          output_path = dist/$output
+          output_path=dist/$output
 
           go build \
             -ldflags="-s -w" \
