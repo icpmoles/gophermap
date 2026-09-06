@@ -1,3 +1,3 @@
-module cli/main
+module gophermap
 
 go 1.26.7
