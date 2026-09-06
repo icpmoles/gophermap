@@ -56,4 +56,5 @@ jobs:
         if: github.ref_type == 'tag'
         with:
           files: |
-            dist/
+            dist/gophermap-${{ matrix.goos }}-${{ matrix.goarch }}/gophermap.*
+            gophermap-${{ matrix.goos }}-${{ matrix.goarch }}/gophermap*
