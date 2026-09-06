@@ -17,6 +17,15 @@ jobs:
         - goos: linux
           goarch: arm
           goarm: 7
+          go-version: 1.26.x
+        - goos: linux
+          goarch: arm
+          goarm: 6
+          go-version: 1.26.x
+        - goos: linux
+          goarch: arm
+          goarm: 5
+          go-version: 1.26.x
 
     steps:
       - uses: actions/checkout@v6
@@ -39,26 +48,26 @@ jobs:
           mkdir -p dist
           
           if [ "${{ matrix.goarch }}" = "arm" ]; then
-            output="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}v${{ matrix.goarm }}"
+            name_triplet="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}v${{ matrix.goarm }}"
           else
-            output="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}"
+            name_triplet="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}"
           fi
 
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            output="${output}/gophermap.exe"
+            filename="${name_triplet}/gophermap.exe"
           else
-            output="${output}/gophermap"
+            filename="${name_triplet}/gophermap"
           fi
 
-          output_path=dist/$output
+          output_path=dist/$name_triplet
 
           go build \
             -ldflags="-s -w" \
             -trimpath -v \
-            -o "$output_path" cli/main.go
+            -o "dist/$filename" cli/main.go
 
-          tar -cvz -f dist/release-gophermap-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz \
-            -C dist "$output" 
+          tar -cvz -f dist/release-$name_triplet.tar.gz \
+            -C dist "$name_triplet" 
 
       - name: Publish artifact
         uses: actions/upload-artifact@v4
