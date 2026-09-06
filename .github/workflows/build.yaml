@@ -58,7 +58,7 @@ jobs:
             -o "$output_path" cli/main.go
 
           tar -cvz -f dist/release-gophermap-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz \
-            -C "$output_path" gophermap*
+            -C dist "$output" 
 
       - name: Publish artifact
         uses: actions/upload-artifact@v4
