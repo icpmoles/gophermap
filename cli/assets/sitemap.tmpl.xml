@@ -1,17 +1,11 @@
-<!doctype html>
-<html lang='en'>
-    <head>
-        <meta charset='utf-8'>
-        <title>Home - Snippetbox</title>
-    </head>
-    <body>
-        <header>
-            <h1><a href='/'>Snippetbox</a></h1>
-        </header>
-        <main>
-            <h2>Latest Snippets</h2>
-            <p>There's nothing to see here yet!</p>
-        </main>
-        <footer>Powered by <a href='https://go.dev/'>Go</a></footer>
-    </body>
-</html>
+{{/* gotmplfmt-ignore-all */ -}}
+{{ printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" }}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  {{- range .Files }}
+  <url>
+    <loc>{{ .Name }}</loc>
+    <lastmod>{{ .LastMod.Format "2006-01-02T15:04:05-07:00" }}</lastmod>
+  </url>
+  {{- end }}
+</urlset>

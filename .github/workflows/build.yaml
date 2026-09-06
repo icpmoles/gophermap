@@ -1,0 +1,28 @@
+name: Go
+
+on: [push]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                go-version: ["1.26.x", "1.27"]
+
+        steps:
+            - uses: actions/checkout@v6
+            - name: Setup Go ${{ matrix.go-version }}
+              uses: actions/setup-go@v5
+              with:
+                  go-version: ${{ matrix.go-version }}
+            # You can test your matrix by printing the current Go version
+            - name: Display Go version
+              run: go version
+            - name: Install dependencies
+              run: go get .
+            - name: Build
+              run: go build -v -o gophermap cli/main.go
+            - uses: actions/upload-artifact@v7
+              with:
+                  path: gophermap
+                  archive: false
