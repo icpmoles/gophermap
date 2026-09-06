@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [$GO_VERSION_SUPPORTED, "stable"]
+        go-version: ['$GO_VERSION_SUPPORTED', "stable"]
         include:
           - goos: windows
             goarch: amd64
