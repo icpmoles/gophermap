@@ -1,3 +1,7 @@
+[![Build GopherMap](https://github.com/icpmoles/gophermap/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/icpmoles/gophermap/actions/workflows/build.yaml)
+[![Casual Maintenance Intended](https://casuallymaintained.tech/badge.svg)](https://casuallymaintained.tech/)
+
+
 ## Usage
 
 Explores recursivelly the working directory or the specified folder looking for pdf, epub, md, txt files and creates a sitemap.xml in the working directory.
