@@ -47,6 +47,15 @@ Found 4635 suitable files
 Template Executed in:  1.133993069s
 ```
 
+## Builds
+
+Builds are provided for Linux, Windows and MacOS (darwin)
+
+The CPU architecture include x64 & Arm64 for all OS.
+
+For Linux specifically there is an ARMv7 build meant for low memory devices like Raspberry Pi running on 32 bit distroes.
+
+
 ## Credits
 
 sitemap template taken from:
