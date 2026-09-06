@@ -1,36 +1,50 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"gophermap/gophermap"
 	"log"
 	"os"
 )
 
+func print_usage() {
+	fmt.Fprintf(flag.CommandLine.Output(),
+		"gophermap - Generate sitemap of directory\n\n",
+	)
+
+	fmt.Fprintf(flag.CommandLine.Output(),
+		"Usage: %s [-directory <folder> -output <output_file>] <base_url>\n\n\tWhere <base_url> should be in the form 'https://example.com'\n\n",
+		os.Args[0],
+	)
+
+	fmt.Fprintln(flag.CommandLine.Output(), "Options:")
+	flag.PrintDefaults()
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("BaseURL not provided!!")
-		os.Exit(1)
-	}
-	baseurl := os.Args[1]
-	folder := "."
-	if len(os.Args) < 3 {
-		fmt.Println("Writing in the same directory")
-	} else {
-		folder = os.Args[2]
-	}
+	/* Parse CLI parameters*/
+	folderPtr := flag.String("directory", ".", "Directory to analyze")
+	sitemap := flag.String("o", "sitemap.xml", "output file")
 
-	s_f, err := os.Create("sitemap.xml")
+	flag.Usage = print_usage
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) != 1 {
+		print_usage()
+		log.Fatal("Please provide <base_url> argument")
+	}
+	url := args[0]
+
+	s_f, err := os.Create(*sitemap)
 	if err != nil {
 		log.Fatal(err.Error())
-		os.Exit(1)
 	}
 
-	execution_time, err := gophermap.CreateSitemap(s_f, folder, baseurl)
-
+	execution_time, err := gophermap.CreateSitemap(s_f, *folderPtr, url)
 	if err != nil {
 		log.Fatal(err.Error())
-		os.Exit(1)
 	}
 	fmt.Println("Template Executed in: ", execution_time)
 }
