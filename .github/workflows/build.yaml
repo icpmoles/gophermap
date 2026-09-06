@@ -63,7 +63,7 @@ jobs:
       - name: Publish artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gophermap-${{ matrix.goos }}-${{ matrix.goarch }}@${{ matrix.go-version }}
+          name: gophermap-${{ matrix.goos }}-${{ matrix.goarch }}@${{ matrix.go-version }}v${{ matrix.goarm }}
           path: dist/release-**.tar.gz
 
       - name: Release
