@@ -1,6 +1,18 @@
 ## Usage
 
+Explores recursivelly the working directory or the specified folder looking for pdf, epub, md, text files and creates a sitemap.xml in the working directory.
 
+```
+gophermap 
+```
+
+### Positional arguments
+
+- *path*: (optional) folder to explore 
+
+### Notes
+
+All the paths in the sitemap are referred to the working directory
 
 
 ## Credits
