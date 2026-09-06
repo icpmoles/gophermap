@@ -56,4 +56,4 @@ jobs:
         if: github.ref_type == 'tag'
         with:
           files: |
-            dist/gophermap-*
+            dist/
