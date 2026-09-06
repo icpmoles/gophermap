@@ -63,6 +63,6 @@ Specifically for Linux there are additional ARMv5/ARMv6/ARMv7 builds meant for l
 ## Credits
 
 sitemap template taken from:
-https://github.com/gohugoio/hugo/blob/master/tpl/tplimpl/embedded/templates/sitemap.xml 
+https://github.com/gohugoio/hugo/blob/master/tpl/tplimpl/embedded/templates/sitemap.xml (Apache-2)
 
 [^1]: Obtained with `tree`
