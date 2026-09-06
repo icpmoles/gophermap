@@ -8,7 +8,9 @@ gophermap
 
 ### Positional arguments
 
-- *path*: (optional) folder to explore 
+- **BaseURL**: https://example.com/ (mandatory) URL of your website
+
+- **path**: (optional) folder to explore 
 
 ### Notes
 
