@@ -35,6 +35,9 @@ func isAllowedFile(path string, allowList *[]string) bool {
 	return slices.Contains(*allowList, strings.ToLower(ext))
 }
 
+/*
+fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
+*/
 func ExplorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder) error {
 	if err != nil {
 		return fmt.Errorf("Walking %q: %w", path, err)
