@@ -40,8 +40,9 @@ jobs:
       - name: Test with Go
         if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'
         run: go test ./gophermap -json > TestResults-${{ matrix.go-version }}.json
-        
+
       - name: Upload Go test results
+        if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'
         uses: actions/upload-artifact@v4
         with:
           name: Go-results-${{ matrix.go-version }}
