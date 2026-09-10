@@ -6,6 +6,7 @@ import (
 	"gophermap/gophermap"
 	"log"
 	"os"
+	"time"
 )
 
 func print_usage() {
@@ -39,12 +40,13 @@ func main() {
 
 	s_f, err := os.Create(*sitemap)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal("Error creating output file:\n\t", err.Error())
 	}
 
-	execution_time, err := gophermap.CreateSitemap(s_f, *folderPtr, url)
+	start := time.Now()
+	err = gophermap.CreateSitemap(s_f, *folderPtr, url)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	fmt.Println("Template Executed in: ", execution_time)
+	fmt.Println("Template Executed in: ", time.Since(start))
 }
