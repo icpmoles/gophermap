@@ -64,7 +64,7 @@ jobs:
           go build \
             -ldflags="-s -w" \
             -trimpath -v \
-            -o "dist/$filename" cli/main.go
+            -o "dist/$filename" cli/cli.go
 
           tar -cvz -f dist/release-$name_triplet.tar.gz \
             -C dist "$name_triplet" 
