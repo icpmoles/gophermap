@@ -32,10 +32,11 @@ func TestIsAllowedFile(t *testing.T) {
 		{path: "goo.pdf.doc", allowed: false}, // nested extension: take the rightmost
 		{path: "txt", allowed: false},         // no extension, but one of the allowed one
 	}
+	allowList := []string{"pdf", "txt", "epub", "md"}
 
 	for _, test := range tests {
 		t.Run(test.path, func(t *testing.T) {
-			if got := isAllowedFile(test.path); got != test.allowed {
+			if got := isAllowedFile(test.path, &allowList); got != test.allowed {
 				t.Fatalf("isAllowedFile(%q) = %v, want %v", test.path, got, test.allowed)
 			}
 		})
@@ -64,7 +65,7 @@ func TestGetFlattenedFolder(t *testing.T) {
 		}
 	}
 
-	got, err := getFlattenedFolder(root)
+	got, err := getFlattenedFolder(root, []string{"pdf", "txt", "epub", "md"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +103,8 @@ func TestGetFlattenedFolder(t *testing.T) {
 
 func TestGetFlattenedFolderMissingPath(t *testing.T) {
 	// provide an unitialized subdirectory
-	_, err := getFlattenedFolder(filepath.Join(t.TempDir(), "missing"))
+	_, err := getFlattenedFolder(filepath.Join(t.TempDir(), "missing"),
+		[]string{"pdf"})
 	if err == nil {
 		t.Fatal("getFlattenedFolder() returned nil error for a missing path")
 	}
@@ -119,7 +121,7 @@ func TestCreateSitemap(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	if err := CreateSitemap(&output, root, "https://example.com"); err != nil {
+	if err := CreateSitemap(&output, root, "https://example.com", []string{"pdf", "txt", "epub", "MD"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -146,7 +148,9 @@ func TestCreateSitemap(t *testing.T) {
 
 func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	var output bytes.Buffer
-	err := CreateSitemap(&output, filepath.Join(t.TempDir(), "missing"), "https://example.com")
+	err := CreateSitemap(&output, filepath.Join(t.TempDir(), "missing"),
+		"https://example.com",
+		[]string{"pdf", "txt", "epub", "md"})
 	if err == nil {
 		t.Fatal("CreateSitemap() returned nil error for a missing directory")
 	}

@@ -27,37 +27,47 @@ type SiteStructure struct {
 	BaseURL string
 }
 
-func isAllowedFile(path string) bool {
-	allowList := []string{"pdf", "txt", "epub", "md"}
-
+/*
+Expects a list of lowercase extensions
+*/
+func isAllowedFile(path string, allowList *[]string) bool {
 	ext := strings.TrimPrefix(filepath.Ext(path), ".")
-
-	return slices.Contains(allowList, strings.ToLower(ext))
+	return slices.Contains(*allowList, strings.ToLower(ext))
 }
 
-func getFlattenedFolder(explorePath string) (ff FlattenedFolder, err error) {
+/*
+fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
+*/
+func ExplorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder) error {
+	if err != nil {
+		return fmt.Errorf("Walking %q: %w", path, err)
+	}
+
+	if !d.IsDir() && isAllowedFile(path, allowList) {
+		info, err := d.Info()
+		if err != nil {
+			return fmt.Errorf("Getting file info for %q: %w", path, err)
+		}
+
+		file := File{
+			Name:    path,
+			LastMod: info.ModTime().UTC(),
+		}
+
+		ff.Files = append(ff.Files, file)
+	}
+
+	return nil
+}
+
+/*
+Returns list of files relative to path.
+*/
+func getFlattenedFolder(explorePath string, allowList []string) (ff FlattenedFolder, err error) {
 
 	err = filepath.WalkDir(explorePath,
 		func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return fmt.Errorf("Walking %q: %w", path, err)
-			}
-
-			if !d.IsDir() && isAllowedFile(path) {
-				info, err := d.Info()
-				if err != nil {
-					return fmt.Errorf("Getting file info for %q: %w", path, err)
-				}
-
-				file := File{
-					Name:    path,
-					LastMod: info.ModTime().UTC(),
-				}
-
-				ff.Files = append(ff.Files, file)
-			}
-
-			return nil
+			return ExplorerWrapper(path, d, err, &allowList, &ff)
 		})
 
 	if err != nil {
@@ -67,11 +77,16 @@ func getFlattenedFolder(explorePath string) (ff FlattenedFolder, err error) {
 	return ff, err
 }
 
-func CreateSitemap(wr io.Writer, explorePath string, baseURL string) error {
+func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList []string) error {
 
 	fmt.Println("Exploring ", explorePath)
 
-	files, err := getFlattenedFolder(explorePath)
+	lowerAllowList := make([]string, len(allowList))
+
+	for i, word := range allowList {
+		lowerAllowList[i] = strings.ToLower(word)
+	}
+	files, err := getFlattenedFolder(explorePath, lowerAllowList)
 	if err != nil {
 		return err
 	}
