@@ -16,11 +16,13 @@ gophermap -folder assets -o public/sitemap.xml https://example.com
 
 gophermap - Generate sitemap of directory
 
-Usage: gophermap [-directory <folder> -output <output_file>] <base_url>
+Usage: gophermap [-directory <folder> -output <output_file> -allow <ext>] <base_url>
 
         Where <base_url> should be in the form 'https://example.com'
 
 Options:
+  -allow value
+        allowed extension (can be specified multiple times) (default 'md','pdf','txt','md')
   -directory string
         Directory to analyze (default ".")
   -output string
@@ -39,7 +41,7 @@ Options:
 
 - **output**: (optional) output file
 
-
+- **allow**: (optional) extension to inclue
 
 ## Benchmarks
 

@@ -16,9 +16,10 @@ func print_usage() {
 	)
 
 	fmt.Fprintf(flag.CommandLine.Output(),
-		"Usage: %s [-directory <folder> -output <output_file>] <base_url>\n\n\tWhere <base_url> should be in the form 'https://example.com'\n\n",
-		os.Args[0],
-	)
+		"Usage: %s [-directory <folder> -output <output_file> -allow <ext>] <base_url>\n\n\t",
+		os.Args[0])
+
+	fmt.Fprintf(flag.CommandLine.Output(), "Where <base_url> should be in the form 'https://example.com'\n\n")
 
 	fmt.Fprintln(flag.CommandLine.Output(), "Options:")
 	flag.PrintDefaults()
@@ -38,11 +39,11 @@ func (s *cliStringList) Set(value string) error {
 func main() {
 	/* Parse CLI parameters*/
 	folderPtr := flag.String("directory", ".", "Directory to analyze")
-	sitemap := flag.String("o", "sitemap.xml", "output file")
+	sitemap := flag.String("output", "sitemap.xml", "output file")
 
 	// we allow multiple allowed extensions
 	var allowed cliStringList
-	flag.Var(&allowed, "allow", "allowed extension (can be specified multiple times) (default 'md','pdf','txt','md')")
+	flag.Var(&allowed, "allow", "allowed extension (can be specified multiple times) (default 'md','pdf','txt','epub')")
 
 	flag.Usage = print_usage
 	flag.Parse()
