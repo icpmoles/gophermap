@@ -35,8 +35,6 @@ Options:
 
   The absolute URL of your published site including the protocol, host, path, and a trailing slash.
 
-  (Definition taken from the [Hugo CMS project](https://gohugo.io/configuration/all/#baseurl))
-
 - **folder**: (optional) directory to explore 
 
 - **output**: (optional) output file
@@ -64,7 +62,6 @@ Specifically for Linux there are additional ARMv5/ARMv6/ARMv7 builds meant for l
 
 ## Credits
 
-sitemap template taken from:
-https://github.com/gohugoio/hugo/blob/master/tpl/tplimpl/embedded/templates/sitemap.xml (Apache-2)
+- Sitemap template taken from [Hugo CMS](https://github.com/gohugoio/hugo/blob/master/tpl/tplimpl/embedded/templates/sitemap.xml) (Apache-2)
 
 [^1]: Obtained with `tree`
