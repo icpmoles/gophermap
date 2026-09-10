@@ -121,7 +121,7 @@ func TestCreateSitemap(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	if err := CreateSitemap(&output, root, "https://example.com", []string{"pdf", "txt", "epub", "md"}); err != nil {
+	if err := CreateSitemap(&output, root, "https://example.com", []string{"pdf", "txt", "epub", "MD"}); err != nil {
 		t.Fatal(err)
 	}
 

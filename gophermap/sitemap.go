@@ -27,35 +27,44 @@ type SiteStructure struct {
 	BaseURL string
 }
 
+/*
+Expects a list of lowercase extensions
+*/
 func isAllowedFile(path string, allowList *[]string) bool {
 	ext := strings.TrimPrefix(filepath.Ext(path), ".")
-
 	return slices.Contains(*allowList, strings.ToLower(ext))
 }
 
+func ExplorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder) error {
+	if err != nil {
+		return fmt.Errorf("Walking %q: %w", path, err)
+	}
+
+	if !d.IsDir() && isAllowedFile(path, allowList) {
+		info, err := d.Info()
+		if err != nil {
+			return fmt.Errorf("Getting file info for %q: %w", path, err)
+		}
+
+		file := File{
+			Name:    path,
+			LastMod: info.ModTime().UTC(),
+		}
+
+		ff.Files = append(ff.Files, file)
+	}
+
+	return nil
+}
+
+/*
+Returns list of files relative to path.
+*/
 func getFlattenedFolder(explorePath string, allowList []string) (ff FlattenedFolder, err error) {
 
 	err = filepath.WalkDir(explorePath,
 		func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return fmt.Errorf("Walking %q: %w", path, err)
-			}
-
-			if !d.IsDir() && isAllowedFile(path, &allowList) {
-				info, err := d.Info()
-				if err != nil {
-					return fmt.Errorf("Getting file info for %q: %w", path, err)
-				}
-
-				file := File{
-					Name:    path,
-					LastMod: info.ModTime().UTC(),
-				}
-
-				ff.Files = append(ff.Files, file)
-			}
-
-			return nil
+			return ExplorerWrapper(path, d, err, &allowList, &ff)
 		})
 
 	if err != nil {
@@ -69,7 +78,12 @@ func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList [
 
 	fmt.Println("Exploring ", explorePath)
 
-	files, err := getFlattenedFolder(explorePath, allowList)
+	lowerAllowList := make([]string, len(allowList))
+
+	for i, word := range allowList {
+		lowerAllowList[i] = strings.ToLower(word)
+	}
+	files, err := getFlattenedFolder(explorePath, lowerAllowList)
 	if err != nil {
 		return err
 	}
