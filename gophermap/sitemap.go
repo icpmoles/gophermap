@@ -27,15 +27,13 @@ type SiteStructure struct {
 	BaseURL string
 }
 
-func isAllowedFile(path string) bool {
-	allowList := []string{"pdf", "txt", "epub", "md"}
-
+func isAllowedFile(path string, allowList *[]string) bool {
 	ext := strings.TrimPrefix(filepath.Ext(path), ".")
 
-	return slices.Contains(allowList, strings.ToLower(ext))
+	return slices.Contains(*allowList, strings.ToLower(ext))
 }
 
-func getFlattenedFolder(explorePath string) (ff FlattenedFolder, err error) {
+func getFlattenedFolder(explorePath string, allowList []string) (ff FlattenedFolder, err error) {
 
 	err = filepath.WalkDir(explorePath,
 		func(path string, d fs.DirEntry, err error) error {
@@ -43,7 +41,7 @@ func getFlattenedFolder(explorePath string) (ff FlattenedFolder, err error) {
 				return fmt.Errorf("Walking %q: %w", path, err)
 			}
 
-			if !d.IsDir() && isAllowedFile(path) {
+			if !d.IsDir() && isAllowedFile(path, &allowList) {
 				info, err := d.Info()
 				if err != nil {
 					return fmt.Errorf("Getting file info for %q: %w", path, err)
@@ -67,11 +65,11 @@ func getFlattenedFolder(explorePath string) (ff FlattenedFolder, err error) {
 	return ff, err
 }
 
-func CreateSitemap(wr io.Writer, explorePath string, baseURL string) error {
+func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList []string) error {
 
 	fmt.Println("Exploring ", explorePath)
 
-	files, err := getFlattenedFolder(explorePath)
+	files, err := getFlattenedFolder(explorePath, allowList)
 	if err != nil {
 		return err
 	}

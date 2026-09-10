@@ -44,7 +44,7 @@ func main() {
 	}
 
 	start := time.Now()
-	err = gophermap.CreateSitemap(s_f, *folderPtr, url)
+	err = gophermap.CreateSitemap(s_f, *folderPtr, url, []string{"pdf", "txt", "epub", "md"})
 	if err != nil {
 		log.Fatal(err.Error())
 	}
