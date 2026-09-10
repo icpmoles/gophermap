@@ -32,7 +32,7 @@ func isAllowedFile(path string) bool {
 
 	ext := strings.TrimPrefix(filepath.Ext(path), ".")
 
-	return slices.Contains(allowList, ext)
+	return slices.Contains(allowList, strings.ToLower(ext))
 }
 
 func getFlattenedFolder(explorePath string) (ff FlattenedFolder, err error) {
