@@ -39,7 +39,7 @@ jobs:
 
       - name: Test with Go
         if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'
-        run: go test ./gophermap -json > TestResults-${{ matrix.go-version }}.json
+        run: go test ./pkg -json > TestResults-${{ matrix.go-version }}.json
 
       - name: Upload Go test results
         if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'
@@ -74,7 +74,7 @@ jobs:
           go build \
             -ldflags="-s -w" \
             -trimpath -v \
-            -o "dist/$filename" cli/cli.go
+            -o "dist/$filename" cmd/cli.go
 
           tar -cvz -f dist/release-$name_triplet.tar.gz \
             -C dist "$name_triplet" 
