@@ -1,7 +1,7 @@
 package gophermap
 
 import (
-	"gophermap/assets"
+	"github.com/icpmoles/gophermap/assets"
 
 	"fmt"
 	"io"

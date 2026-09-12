@@ -1,3 +1,3 @@
-module gophermap
+module github.com/icpmoles/gophermap
 
-go 1.26.7
+go 1.27.1
