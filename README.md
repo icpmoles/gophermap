@@ -44,7 +44,7 @@ Options:
 
 ## Benchmarks
 
-Tested on my own personal *Downloads* folder with approximately 6786 directories & 64515 files [^1]
+Tested on my own personal *Downloads* folder with approximately 6786 directories & 64515 files
 
 ```
 Exploring  /home/icpmoles/Downloads
@@ -64,5 +64,3 @@ Specifically for Linux there are additional ARMv5/ARMv6/ARMv7 builds meant for l
 ## Credits
 
 - Sitemap template taken from [Hugo CMS](https://github.com/gohugoio/hugo/blob/master/tpl/tplimpl/embedded/templates/sitemap.xml) (Apache-2)
-
-[^1]: Obtained with `tree`

@@ -51,7 +51,7 @@ func main() {
 
 	if len(allowed) == 0 {
 		// default values
-		allowed = []string{"pdf", "txt", "epub", "md"}
+		allowed = gophermap.ExtensionsAllowList
 	}
 
 	args := flag.Args()

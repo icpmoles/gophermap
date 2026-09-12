@@ -12,14 +12,14 @@ import (
 	"uuid"
 )
 
-type PathTable struct {
+type pathTable struct {
 	path    string
 	allowed bool
 }
 
-func GenerateRandomDirectory(size int) []PathTable {
+func generateRandomDirectory(size int) []pathTable {
 
-	paths := []PathTable{}
+	paths := []pathTable{}
 
 	allowedExtensions := []string{
 		"pdf",
@@ -76,7 +76,7 @@ func GenerateRandomDirectory(size int) []PathTable {
 		filename := uuid.NewV4().String()
 
 		// if allowedPath {
-		allowedPath := PathTable{
+		allowedPath := pathTable{
 			path: "allowed/" +
 				Folders[i%len(Folders)] +
 				filename + "." +
@@ -84,7 +84,7 @@ func GenerateRandomDirectory(size int) []PathTable {
 			allowed: true}
 		paths = append(paths, allowedPath)
 
-		forbiddenPath := PathTable{
+		forbiddenPath := pathTable{
 			path: "forbidden/" +
 				Folders[i%len(Folders)] +
 				filename + "." +
@@ -100,18 +100,17 @@ func GenerateRandomDirectory(size int) []PathTable {
 }
 
 func TestIsAllowedFileLong(t *testing.T) {
-	paths := GenerateRandomDirectory(100)
-	allowList := []string{"pdf", "txt", "epub", "md"}
+	paths := generateRandomDirectory(100)
 
 	for _, test := range paths {
-		if got := isAllowedFile(test.path, &allowList); got != test.allowed {
+		if got := isAllowedFile(test.path, &ExtensionsAllowList); got != test.allowed {
 			t.Fatalf("isAllowedFile (long) (%q) = %v, want %v", test.path, got, test.allowed)
 		}
 	}
 }
 
 func TestIsAllowedFile(t *testing.T) {
-	tests := []PathTable{
+	tests := []pathTable{
 		// Correct Extension
 		{path: "document.pdf", allowed: true},
 		{path: "notes.txt", allowed: true},
@@ -128,11 +127,10 @@ func TestIsAllowedFile(t *testing.T) {
 		{path: "goo.pdf.doc", allowed: false}, // nested extension: take the rightmost
 		{path: "txt", allowed: false},         // no extension, but one of the allowed one
 	}
-	allowList := []string{"pdf", "txt", "epub", "md"}
 
 	for _, test := range tests {
 		t.Run(test.path, func(t *testing.T) {
-			if got := isAllowedFile(test.path, &allowList); got != test.allowed {
+			if got := isAllowedFile(test.path, &ExtensionsAllowList); got != test.allowed {
 				t.Fatalf("isAllowedFile(%q) = %v, want %v", test.path, got, test.allowed)
 			}
 		})
@@ -161,13 +159,13 @@ func TestGetFlattenedFolder(t *testing.T) {
 		}
 	}
 
-	got, err := getFlattenedFolder(root, []string{"pdf", "txt", "epub", "md"})
+	got, err := GetFlattenedFolder(root, []string{"pdf", "txt", "epub", "md"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if len(got.Files) != 2 {
-		t.Fatalf("getFlattenedFolder() found %d files, want 2", len(got.Files))
+		t.Fatalf("GetFlattenedFolder() found %d files, want 2", len(got.Files))
 	}
 
 	found := make(map[string]time.Time, len(got.Files))
@@ -179,7 +177,7 @@ func TestGetFlattenedFolder(t *testing.T) {
 		fullPath := filepath.Join(root, path)
 		modTime, exists := found[fullPath]
 		if !exists {
-			t.Errorf("getFlattenedFolder() did not include %q", fullPath)
+			t.Errorf("GetFlattenedFolder() did not include %q", fullPath)
 			continue
 		}
 		if modTime.Location() != time.UTC {
@@ -191,7 +189,7 @@ func TestGetFlattenedFolder(t *testing.T) {
 		fullPath := filepath.Join(root, path)
 		_, exists := found[fullPath]
 		if exists {
-			t.Errorf("getFlattenedFolder() should not include %q", fullPath)
+			t.Errorf("GetFlattenedFolder() should not include %q", fullPath)
 			continue
 		}
 	}
@@ -199,13 +197,13 @@ func TestGetFlattenedFolder(t *testing.T) {
 
 func TestGetFlattenedFolderMissingPath(t *testing.T) {
 	// provide an unitialized subdirectory
-	_, err := getFlattenedFolder(filepath.Join(t.TempDir(), "missing"),
+	_, err := GetFlattenedFolder(filepath.Join(t.TempDir(), "missing"),
 		[]string{"pdf"})
 	if err == nil {
-		t.Fatal("getFlattenedFolder() returned nil error for a missing path")
+		t.Fatal("GetFlattenedFolder() returned nil error for a missing path")
 	}
 	if !strings.Contains(err.Error(), "Error exploring target directory") {
-		t.Fatalf("getFlattenedFolder() error = %q, want exploration context", err)
+		t.Fatalf("GetFlattenedFolder() error = %q, want exploration context", err)
 	}
 }
 
@@ -217,7 +215,7 @@ func TestCreateSitemap(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	if err := CreateSitemap(&output, root, "https://example.com", []string{"pdf", "txt", "epub", "MD"}); err != nil {
+	if err := CreateSitemap(&output, root, "https://example.com", ExtensionsAllowList); err != nil {
 		t.Fatal(err)
 	}
 
@@ -257,7 +255,7 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 
 func BenchmarkGetFlattenedFolder(b *testing.B) {
 	root := b.TempDir()
-	paths := GenerateRandomDirectory(400)
+	paths := generateRandomDirectory(400)
 
 	for _, path := range paths {
 		fullPath := filepath.Join(root, path.path)
@@ -270,9 +268,9 @@ func BenchmarkGetFlattenedFolder(b *testing.B) {
 	}
 
 	for b.Loop() {
-		_, err := getFlattenedFolder(root, []string{"pdf", "txt", "epub", "md"})
+		_, err := GetFlattenedFolder(root, ExtensionsAllowList)
 		if err != nil {
-			b.Fatal("getFlattenedFolder() returned nil error")
+			b.Fatal("GetFlattenedFolder() returned nil error")
 		}
 	}
 }
