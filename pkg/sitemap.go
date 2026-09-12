@@ -13,21 +13,27 @@ import (
 	"time"
 )
 
-type File struct {
+// Default allowed extensions
+var ExtensionsAllowList = []string{"pdf", "txt", "epub", "md"}
+
+type file struct {
 	Name    string
 	LastMod time.Time
 }
 
+// List of file types
 type FlattenedFolder struct {
-	Files []File
+	Files []file
 }
 
+// Expected input type for sitemap template
 type SiteStructure struct {
 	Files   FlattenedFolder
 	BaseURL string
 }
 
 /*
+Checks if the file has the correct extension.
 Expects a list of lowercase extensions
 */
 func isAllowedFile(path string, allowList *[]string) bool {
@@ -38,7 +44,7 @@ func isAllowedFile(path string, allowList *[]string) bool {
 /*
 fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
 */
-func ExplorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder) error {
+func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder) error {
 	if err != nil {
 		return fmt.Errorf("Walking %q: %w", path, err)
 	}
@@ -49,7 +55,7 @@ func ExplorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 			return fmt.Errorf("Getting file info for %q: %w", path, err)
 		}
 
-		file := File{
+		file := file{
 			Name:    path,
 			LastMod: info.ModTime().UTC(),
 		}
@@ -63,11 +69,11 @@ func ExplorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 /*
 Returns list of files relative to path.
 */
-func getFlattenedFolder(explorePath string, allowList []string) (ff FlattenedFolder, err error) {
+func GetFlattenedFolder(explorePath string, allowList []string) (ff FlattenedFolder, err error) {
 
 	err = filepath.WalkDir(explorePath,
 		func(path string, d fs.DirEntry, err error) error {
-			return ExplorerWrapper(path, d, err, &allowList, &ff)
+			return explorerWrapper(path, d, err, &allowList, &ff)
 		})
 
 	if err != nil {
@@ -77,6 +83,13 @@ func getFlattenedFolder(explorePath string, allowList []string) (ff FlattenedFol
 	return ff, err
 }
 
+/*
+CreateSitemap:
+- explores the path provided with explorePath
+- filters all the files with extension that respect the allowList. (See ExtensionsAllowList for an example)
+- calculates the final URL based on baseURL
+- writes the resulting XML content to wr
+*/
 func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList []string) error {
 
 	fmt.Println("Exploring ", explorePath)
@@ -86,7 +99,7 @@ func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList [
 	for i, word := range allowList {
 		lowerAllowList[i] = strings.ToLower(word)
 	}
-	files, err := getFlattenedFolder(explorePath, lowerAllowList)
+	files, err := GetFlattenedFolder(explorePath, lowerAllowList)
 	if err != nil {
 		return err
 	}
