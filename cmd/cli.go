@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	gophermap "gophermap/pkg"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	gophermap "github.com/icpmoles/gophermap/pkg"
 )
 
 func print_usage() {
