@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gophermap/gophermap"
+	gophermap "gophermap/pkg"
 	"log"
 	"os"
 	"strings"
@@ -43,7 +43,7 @@ func main() {
 
 	// we allow multiple allowed extensions
 	var allowed cliStringList
-	flag.Var(&allowed, "allow", "allowed extension (can be specified multiple times) (default 'md','pdf','txt','epub')")
+	flag.Var(&allowed, "allow", "allowed extension to include (can be specified multiple times) (default 'md','pdf','txt','epub')")
 
 	flag.Usage = print_usage
 	flag.Parse()
