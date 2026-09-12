@@ -9,13 +9,109 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"uuid"
 )
 
+type PathTable struct {
+	path    string
+	allowed bool
+}
+
+func GenerateRandomDirectory(size int) []PathTable {
+
+	paths := []PathTable{}
+
+	allowedExtensions := []string{
+		"pdf",
+		"txt",
+		"epub",
+		"md",
+		"PdF",
+		"Txt",
+		"Epub",
+		"MD",
+		"md.txt",
+		"txt.pdf",
+		"md.pdf",
+	}
+
+	ForbiddenExtensions := []string{
+		"png",
+		"doc",
+		"docx",
+		"md.png",
+		"epub.doc",
+		"pdfx",
+		"pdf.",
+		"pdfx",
+		"spdf",
+	}
+
+	Folders := []string{
+		"assets/A/",
+		"assets/B/",
+
+		"pictures/AB/",
+		"pictures/B/",
+
+		"foo/AB/",
+		"foo/B/",
+
+		"foo/bar/car/fool/AB/",
+		"foo/bar/car/fool/B/",
+
+		"random/AB/",
+		"random/B/",
+
+		"downloads/AB/",
+		"downloads/B/",
+
+		"",
+	}
+
+	// var allowedPath bool
+	for i := range size {
+
+		// allowedPath = i%2 == 1
+		filename := uuid.NewV4().String()
+
+		// if allowedPath {
+		allowedPath := PathTable{
+			path: "allowed/" +
+				Folders[i%len(Folders)] +
+				filename + "." +
+				allowedExtensions[i%len(allowedExtensions)],
+			allowed: true}
+		paths = append(paths, allowedPath)
+
+		forbiddenPath := PathTable{
+			path: "forbidden/" +
+				Folders[i%len(Folders)] +
+				filename + "." +
+				ForbiddenExtensions[i%len(ForbiddenExtensions)],
+			allowed: false}
+		paths = append(paths,
+			forbiddenPath)
+
+	}
+
+	return paths
+
+}
+
+func TestIsAllowedFileLong(t *testing.T) {
+	paths := GenerateRandomDirectory(100)
+	allowList := []string{"pdf", "txt", "epub", "md"}
+
+	for _, test := range paths {
+		if got := isAllowedFile(test.path, &allowList); got != test.allowed {
+			t.Fatalf("isAllowedFile (long) (%q) = %v, want %v", test.path, got, test.allowed)
+		}
+	}
+}
+
 func TestIsAllowedFile(t *testing.T) {
-	tests := []struct {
-		path    string
-		allowed bool
-	}{
+	tests := []PathTable{
 		// Correct Extension
 		{path: "document.pdf", allowed: true},
 		{path: "notes.txt", allowed: true},
@@ -156,5 +252,27 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("CreateSitemap() error = %v, want an os.ErrNotExist cause", err)
+	}
+}
+
+func BenchmarkGetFlattenedFolder(b *testing.B) {
+	root := b.TempDir()
+	paths := GenerateRandomDirectory(400)
+
+	for _, path := range paths {
+		fullPath := filepath.Join(root, path.path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			b.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte(path.path), 0o644); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	for b.Loop() {
+		_, err := getFlattenedFolder(root, []string{"pdf", "txt", "epub", "md"})
+		if err != nil {
+			b.Fatal("getFlattenedFolder() returned nil error")
+		}
 	}
 }
