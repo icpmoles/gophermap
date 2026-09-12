@@ -1,4 +1,5 @@
 [![Build GopherMap](https://github.com/icpmoles/gophermap/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/icpmoles/gophermap/actions/workflows/build.yaml)
+[![Release](https://img.shields.io/github/release/icpmoles/gophermap.svg?style=flat-square)](https://github.com/icpmoles/gophermap/releases/latest)
 [![Casual Maintenance Intended](https://casuallymaintained.tech/badge.svg)](https://casuallymaintained.tech/)
 
 
