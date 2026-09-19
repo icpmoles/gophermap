@@ -55,8 +55,14 @@ jobs:
           GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: 0
         run: |
-          mkdir -p dist
-          
+          BUILD_DATE=$(date -u +'%Y%m%d')
+          SHORT_SHA="${GITHUB_SHA::7}"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION="${{ github.ref_name }}-${BUILD_DATE}-${SHORT_SHA}"
+          else
+            VERSION="${BUILD_DATE}-${SHORT_SHA}"
+          fi
+
           if [ "${{ matrix.goarch }}" = "arm" ]; then
             name_triplet="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}v${{ matrix.goarm }}"
           else
@@ -69,11 +75,11 @@ jobs:
             filename="${name_triplet}/gophermap"
           fi
 
+          mkdir -p dist
           output_path=dist/$name_triplet
 
           go build \
-            -buildvcs=true \
-            -ldflags="-s -w" \
+            -ldflags="-s -w -X main.Version=${VERSION}" \
             -trimpath -v \
             -o "dist/$filename" cmd/cli.go
 
