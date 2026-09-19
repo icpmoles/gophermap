@@ -49,6 +49,7 @@ func main() {
 	/* Parse CLI parameters*/
 	folderPtr := flag.String("directory", ".", "Directory to analyze")
 	sitemap := flag.String("output", "sitemap.xml", "output file")
+	now := flag.Bool("now", false, "use execution time as timestamp for <lastmod> field")
 
 	// we allow multiple allowed extensions
 	var allowed cliStringList
@@ -75,7 +76,7 @@ func main() {
 	}
 
 	start := time.Now()
-	err = gophermap.CreateSitemap(s_f, *folderPtr, url, allowed)
+	err = gophermap.CreateSitemap(s_f, *folderPtr, url, allowed, *now)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

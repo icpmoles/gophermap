@@ -44,20 +44,28 @@ func isAllowedFile(path string, allowList *[]string) bool {
 /*
 fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
 */
-func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder) error {
+func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder, timestamp *time.Time) error {
 	if err != nil {
 		return fmt.Errorf("Walking %q: %w", path, err)
 	}
 
 	if !d.IsDir() && isAllowedFile(path, allowList) {
 		info, err := d.Info()
+
 		if err != nil {
 			return fmt.Errorf("Getting file info for %q: %w", path, err)
 		}
 
+		var LastModTimestamp time.Time
+		if timestamp == nil {
+			LastModTimestamp = info.ModTime().UTC()
+		} else {
+			LastModTimestamp = *timestamp
+		}
+
 		file := file{
 			Name:    path,
-			LastMod: info.ModTime().UTC(),
+			LastMod: LastModTimestamp,
 		}
 
 		ff.Files = append(ff.Files, file)
@@ -68,12 +76,14 @@ func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 
 /*
 Returns list of files relative to path.
+  - timestamp: arbitrary timestamp to use for <lastmod> field. If equal to nil means use the modifiedTimestamp
+    from the filesystem
 */
-func GetFlattenedFolder(explorePath string, allowList []string) (ff FlattenedFolder, err error) {
+func GetFlattenedFolder(explorePath string, allowList []string, timestamp *time.Time) (ff FlattenedFolder, err error) {
 
 	err = filepath.WalkDir(explorePath,
 		func(path string, d fs.DirEntry, err error) error {
-			return explorerWrapper(path, d, err, &allowList, &ff)
+			return explorerWrapper(path, d, err, &allowList, &ff, timestamp)
 		})
 
 	if err != nil {
@@ -90,7 +100,7 @@ CreateSitemap:
 - calculates the final URL based on baseURL
 - writes the resulting XML content to wr
 */
-func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList []string) error {
+func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList []string, useExecutionTime bool) error {
 
 	fmt.Println("Exploring ", explorePath)
 
@@ -99,7 +109,17 @@ func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList [
 	for i, word := range allowList {
 		lowerAllowList[i] = strings.ToLower(word)
 	}
-	files, err := GetFlattenedFolder(explorePath, lowerAllowList)
+
+	var timestamp *time.Time
+
+	if useExecutionTime {
+		t := time.Now().UTC()
+		timestamp = &t
+	} else {
+		timestamp = nil
+	}
+
+	files, err := GetFlattenedFolder(explorePath, lowerAllowList, timestamp)
 	if err != nil {
 		return err
 	}

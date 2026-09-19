@@ -11,7 +11,7 @@ Explores recursivelly the working directory or the specified folder looking for 
 
 ```terminal
 gophermap https://example.com
-gophermap -folder assets -o public/sitemap.xml https://example.com
+gophermap -folder assets -o public/sitemap.xml -allow html -allow xml -allow xls https://example.com
 ```
 
 ```terminal
@@ -19,7 +19,7 @@ gophermap -folder assets -o public/sitemap.xml https://example.com
 
 gophermap - Generate sitemap of directory
 
-Usage: gophermap [-directory <folder> -output <output_file> -allow <ext>] <base_url>
+Usage: gophermap [-directory <folder> -output <output_file> -now -allow <ext>] <base_url>
 
         Where <base_url> should be in the form 'https://example.com'
 
@@ -28,6 +28,8 @@ Options:
         allowed extension (can be specified multiple times) (default 'md','pdf','txt','md')
   -directory string
         Directory to analyze (default ".")
+  -now
+        use execution time as timestamp for <lastmod> field
   -output string
         output file (default "sitemap.xml")
 ```
@@ -42,7 +44,9 @@ Options:
 
 - **output**: (optional) output file
 
-- **allow**: (optional) extension to inclue
+- **now**: (optional) if enabled uses execution time as timestamp for <lastmod>. By default it uses the timestamp returned by the filesystem
+
+- **allow**: (optional) extension to include
 
 ## Benchmarks
 
