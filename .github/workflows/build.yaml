@@ -72,6 +72,7 @@ jobs:
           output_path=dist/$name_triplet
 
           go build \
+            -buildvcs=true \ 
             -ldflags="-s -w" \
             -trimpath -v \
             -o "dist/$filename" cmd/cli.go

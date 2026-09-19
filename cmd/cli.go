@@ -25,7 +25,7 @@ func print_usage() {
 	)
 
 	fmt.Fprintf(flag.CommandLine.Output(),
-		"Usage: %s [-directory <folder> -output <output_file> -allow <ext>] <base_url>\n\n\t",
+		"Usage: %s [-directory <folder> -output <output_file> -allow <ext> -now] <base_url>\n\n\t",
 		os.Args[0])
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Where <base_url> should be in the form 'https://example.com'\n\n")
