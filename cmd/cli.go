@@ -8,12 +8,20 @@ import (
 	"strings"
 	"time"
 
+	"runtime/debug"
+
 	gophermap "github.com/icpmoles/gophermap/pkg"
 )
 
 func print_usage() {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
 	fmt.Fprintf(flag.CommandLine.Output(),
-		"gophermap - Generate sitemap of directory\n\n",
+		"gophermap (%s) - Generate sitemap of directory\n\n",
+		info.Main.Version,
 	)
 
 	fmt.Fprintf(flag.CommandLine.Output(),
