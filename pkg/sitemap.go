@@ -2,6 +2,7 @@ package gophermap
 
 import (
 	"github.com/icpmoles/gophermap/assets"
+	"github.com/icpmoles/gophermap/types"
 
 	"fmt"
 	"io"
@@ -16,22 +17,6 @@ import (
 // Default allowed extensions
 var ExtensionsAllowList = []string{"pdf", "txt", "epub", "md"}
 
-type file struct {
-	Name    string
-	LastMod time.Time
-}
-
-// List of file types
-type FlattenedFolder struct {
-	Files []file
-}
-
-// Expected input type for sitemap template
-type SiteStructure struct {
-	Files   FlattenedFolder
-	BaseURL string
-}
-
 /*
 Checks if the file has the correct extension.
 Expects a list of lowercase extensions
@@ -44,7 +29,7 @@ func isAllowedFile(path string, allowList *[]string) bool {
 /*
 fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
 */
-func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *FlattenedFolder, timestamp *time.Time) error {
+func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *types.FlattenedFolder, timestamp *time.Time) error {
 	if err != nil {
 		return fmt.Errorf("Walking %q: %w", path, err)
 	}
@@ -63,7 +48,7 @@ func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 			LastModTimestamp = *timestamp
 		}
 
-		file := file{
+		file := types.File{
 			Name:    path,
 			LastMod: LastModTimestamp,
 		}
@@ -79,7 +64,7 @@ Returns list of files relative to path.
   - timestamp: arbitrary timestamp to use for <lastmod> field. If equal to nil means use the modifiedTimestamp
     from the filesystem
 */
-func GetFlattenedFolder(explorePath string, allowList []string, timestamp *time.Time) (ff FlattenedFolder, err error) {
+func GetFlattenedFolder(explorePath string, allowList []string, timestamp *time.Time) (ff types.FlattenedFolder, err error) {
 
 	err = filepath.WalkDir(explorePath,
 		func(path string, d fs.DirEntry, err error) error {
@@ -100,19 +85,30 @@ CreateSitemap:
 - calculates the final URL based on baseURL
 - writes the resulting XML content to wr
 */
-func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList []string, useExecutionTime bool) error {
+func CreateSitemap(wr io.Writer, explorePath string, baseURL string, setters ...types.Option) error {
+
+	// Default Options
+	args := &types.Options{
+		AllowList:        ExtensionsAllowList,
+		UseExecutionTime: false,
+		Frequency:        types.Never,
+	}
+
+	for _, setter := range setters {
+		setter(args)
+	}
 
 	fmt.Println("Exploring ", explorePath)
 
-	lowerAllowList := make([]string, len(allowList))
+	lowerAllowList := make([]string, len(args.AllowList))
 
-	for i, word := range allowList {
+	for i, word := range args.AllowList {
 		lowerAllowList[i] = strings.ToLower(word)
 	}
 
 	var timestamp *time.Time
 
-	if useExecutionTime {
+	if args.UseExecutionTime {
 		t := time.Now().UTC()
 		timestamp = &t
 	} else {
@@ -126,9 +122,10 @@ func CreateSitemap(wr io.Writer, explorePath string, baseURL string, allowList [
 
 	fmt.Printf("Found %d suitable files\n", len(files.Files))
 
-	site := SiteStructure{
-		Files:   files,
-		BaseURL: baseURL,
+	site := types.SiteStructure{
+		Files:      files,
+		BaseURL:    baseURL,
+		ChangeFreq: args.Frequency.String(),
 	}
 
 	ts, err := template.ParseFS(assets.Templates, "templates/sitemap.tmpl.xml")

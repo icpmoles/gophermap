@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 	"uuid"
+
+	"github.com/icpmoles/gophermap/types"
 )
 
 type pathTable struct {
@@ -219,15 +221,17 @@ func TestCreateSitemap(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	err = CreateSitemap(&output, root, "https://example.com", ExtensionsAllowList, true)
+	err = CreateSitemap(&output, root, "https://example.com",
+		types.AllowList(ExtensionsAllowList), types.UseExecutionTime(true))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var sitemap struct {
 		URLs []struct {
-			Location string `xml:"loc"`
-			LastMod  string `xml:"lastmod"`
+			Location   string `xml:"loc"`
+			LastMod    string `xml:"lastmod"`
+			Changefreq string `xml:"changefreq"`
 		} `xml:"url"`
 	}
 	if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
@@ -249,8 +253,8 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	var output bytes.Buffer
 	err := CreateSitemap(&output, filepath.Join(t.TempDir(), "missing"),
 		"https://example.com",
-		[]string{"pdf", "txt", "epub", "md"},
-		true)
+		types.AllowList([]string{"pdf", "txt", "epub", "md"}),
+		types.UseExecutionTime(true))
 
 	if err == nil {
 		t.Fatal("CreateSitemap() returned nil error for a missing directory")

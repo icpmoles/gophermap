@@ -9,6 +9,7 @@ import (
 	"time"
 
 	gophermap "github.com/icpmoles/gophermap/pkg"
+	gmtypes "github.com/icpmoles/gophermap/types"
 )
 
 var Version = "dev" // Fallback default
@@ -71,7 +72,11 @@ func main() {
 	}
 
 	start := time.Now()
-	err = gophermap.CreateSitemap(s_f, *folderPtr, url, allowed, *now)
+	err = gophermap.CreateSitemap(s_f, *folderPtr, url,
+		gmtypes.AllowList(allowed),
+		gmtypes.UseExecutionTime(*now),
+	)
+
 	if err != nil {
 		log.Fatal(err.Error())
 	}
