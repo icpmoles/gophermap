@@ -9,15 +9,19 @@ import (
 	"time"
 
 	gophermap "github.com/icpmoles/gophermap/pkg"
+	gmtypes "github.com/icpmoles/gophermap/types"
 )
+
+var Version = "dev" // Fallback default
 
 func print_usage() {
 	fmt.Fprintf(flag.CommandLine.Output(),
-		"gophermap - Generate sitemap of directory\n\n",
+		"gophermap (%s) - Generate sitemap of directory\n\n",
+		Version,
 	)
 
 	fmt.Fprintf(flag.CommandLine.Output(),
-		"Usage: %s [-directory <folder> -output <output_file> -allow <ext>] <base_url>\n\n\t",
+		"Usage: %s [-directory <folder> -changefreq <freq> -output <output_file> -allow <ext> -now] <base_url>\n\n\t",
 		os.Args[0])
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Where <base_url> should be in the form 'https://example.com'\n\n")
@@ -41,6 +45,8 @@ func main() {
 	/* Parse CLI parameters*/
 	folderPtr := flag.String("directory", ".", "Directory to analyze")
 	sitemap := flag.String("output", "sitemap.xml", "output file")
+	changeFrequency := flag.String("changefreq", "never", "How often the file is esxpected to change, allowed values are: 'always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly' & 'never'")
+	now := flag.Bool("now", false, "use execution time as timestamp for <lastmod> field")
 
 	// we allow multiple allowed extensions
 	var allowed cliStringList
@@ -67,7 +73,12 @@ func main() {
 	}
 
 	start := time.Now()
-	err = gophermap.CreateSitemap(s_f, *folderPtr, url, allowed)
+	err = gophermap.CreateSitemap(s_f, *folderPtr, url,
+		gmtypes.WithAllowList(allowed),
+		gmtypes.WithUseExecutionTime(*now),
+		gmtypes.WithFrequencyFromString(*changeFrequency),
+	)
+
 	if err != nil {
 		log.Fatal(err.Error())
 	}

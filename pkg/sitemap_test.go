@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 	"uuid"
+
+	"github.com/icpmoles/gophermap/types"
 )
 
 type pathTable struct {
@@ -159,7 +161,7 @@ func TestGetFlattenedFolder(t *testing.T) {
 		}
 	}
 
-	got, err := GetFlattenedFolder(root, []string{"pdf", "txt", "epub", "md"})
+	got, err := GetFlattenedFolder(root, []string{"pdf", "txt", "epub", "md"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,8 +199,11 @@ func TestGetFlattenedFolder(t *testing.T) {
 
 func TestGetFlattenedFolderMissingPath(t *testing.T) {
 	// provide an unitialized subdirectory
-	_, err := GetFlattenedFolder(filepath.Join(t.TempDir(), "missing"),
-		[]string{"pdf"})
+	_, err := GetFlattenedFolder(
+		filepath.Join(t.TempDir(), "missing"),
+		[]string{"pdf"},
+		nil,
+	)
 	if err == nil {
 		t.Fatal("GetFlattenedFolder() returned nil error for a missing path")
 	}
@@ -210,19 +215,23 @@ func TestGetFlattenedFolderMissingPath(t *testing.T) {
 func TestCreateSitemap(t *testing.T) {
 	root := t.TempDir()
 	filePath := filepath.Join(root, "notes.md")
-	if err := os.WriteFile(filePath, []byte("notes"), 0o644); err != nil {
+	err := os.WriteFile(filePath, []byte("notes"), 0o644)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	var output bytes.Buffer
-	if err := CreateSitemap(&output, root, "https://example.com", ExtensionsAllowList); err != nil {
+	err = CreateSitemap(&output, root, "https://example.com",
+		types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(true))
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	var sitemap struct {
 		URLs []struct {
-			Location string `xml:"loc"`
-			LastMod  string `xml:"lastmod"`
+			Location   string `xml:"loc"`
+			LastMod    string `xml:"lastmod"`
+			Changefreq string `xml:"changefreq"`
 		} `xml:"url"`
 	}
 	if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
@@ -244,7 +253,9 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	var output bytes.Buffer
 	err := CreateSitemap(&output, filepath.Join(t.TempDir(), "missing"),
 		"https://example.com",
-		[]string{"pdf", "txt", "epub", "md"})
+		types.WithAllowList([]string{"pdf", "txt", "epub", "md"}),
+		types.WithUseExecutionTime(true))
+
 	if err == nil {
 		t.Fatal("CreateSitemap() returned nil error for a missing directory")
 	}
@@ -268,7 +279,7 @@ func BenchmarkGetFlattenedFolder(b *testing.B) {
 	}
 
 	for b.Loop() {
-		_, err := GetFlattenedFolder(root, ExtensionsAllowList)
+		_, err := GetFlattenedFolder(root, ExtensionsAllowList, nil)
 		if err != nil {
 			b.Fatal("GetFlattenedFolder() returned nil error")
 		}

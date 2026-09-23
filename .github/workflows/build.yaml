@@ -6,7 +6,43 @@ permissions:
   contents: write
 
 jobs:
+  # avoids building in parallel if it's going to fail regardless
+  test-build:
+    runs-on: ubuntu-latest  
+    strategy:
+      matrix:
+        go-version: ['1.27.1']
+        goos: [linux]
+        goarch: [amd64]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Test
+        run: go test ./pkg ./types
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build \
+            -ldflags="-s -w -X main.Version="TEST_VERSION"" \
+            -trimpath -v \
+            -o cli_gophermap cmd/cli.go
+          
+          ./cli_gophermap -h
+          ./cli_gophermap https://exmaple.com
+          
+          
+
+
   build:
+    needs: test-build
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,12 +70,9 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Display Go version
-        run: go version
-
       - name: Test with Go
         if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'
-        run: go test ./pkg -json > TestResults-${{ matrix.go-version }}.json
+        run: go test ./pkg ./types -json > TestResults-${{ matrix.go-version }}.json
 
       - name: Upload Go test results
         if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'
@@ -55,8 +88,14 @@ jobs:
           GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: 0
         run: |
-          mkdir -p dist
-          
+          BUILD_DATE=$(date -u +'%Y%m%d')
+          SHORT_SHA="${GITHUB_SHA::7}"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION="${{ github.ref_name }}-${BUILD_DATE}-${SHORT_SHA}"
+          else
+            VERSION="${BUILD_DATE}-${SHORT_SHA}"
+          fi
+
           if [ "${{ matrix.goarch }}" = "arm" ]; then
             name_triplet="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}v${{ matrix.goarm }}"
           else
@@ -69,10 +108,11 @@ jobs:
             filename="${name_triplet}/gophermap"
           fi
 
+          mkdir -p dist
           output_path=dist/$name_triplet
 
           go build \
-            -ldflags="-s -w" \
+            -ldflags="-s -w -X main.Version=${VERSION}" \
             -trimpath -v \
             -o "dist/$filename" cmd/cli.go
 
