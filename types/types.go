@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -28,7 +30,7 @@ var siteMapFrequencyName = map[SiteMapFrequency]string{
 	Never:   "never",
 }
 
-var SiteMapFrequencyName = map[string]SiteMapFrequency{
+var nameSiteMapFrequency = map[string]SiteMapFrequency{
 	"always":  Always,
 	"hourly":  Hourly,
 	"daily":   Daily,
@@ -52,21 +54,35 @@ type Options struct {
 
 type Option func(*Options)
 
-func AllowList(allowList []string) Option {
+func WithAllowList(allowList []string) Option {
 	return func(args *Options) {
 		args.AllowList = allowList
 	}
 }
 
-func UseExecutionTime(useExecutionTime bool) Option {
+// if 'true' it uses the time of execution for <lastmod> instead of the time reported by the filesystem
+func WithUseExecutionTime(useExecutionTime bool) Option {
 	return func(args *Options) {
 		args.UseExecutionTime = useExecutionTime
 	}
 }
 
-func Frequency(f SiteMapFrequency) Option {
+func WithFrequency(f SiteMapFrequency) Option {
 	return func(args *Options) {
 		args.Frequency = f
+	}
+}
+
+// accepts values defined by https://www.sitemaps.org/protocol.html#:~:text=both%20sources%20differently.-,%3Cchangefreq%3E,-optional
+func WithFrequencyFromString(f string) Option {
+	return func(args *Options) {
+		freq, ok := nameSiteMapFrequency[strings.ToLower(f)]
+		if ok {
+			args.Frequency = freq
+		} else {
+			fmt.Printf("'%s' not accepted 'changefreq' value, defaulting to 'never'\n", f)
+			args.Frequency = Never
+		}
 	}
 }
 

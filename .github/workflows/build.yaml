@@ -20,6 +20,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
+
+      - name: Test
+        run: go test ./pkg ./types
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
@@ -68,7 +72,7 @@ jobs:
 
       - name: Test with Go
         if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'
-        run: go test ./pkg -json > TestResults-${{ matrix.go-version }}.json
+        run: go test ./pkg ./types -json > TestResults-${{ matrix.go-version }}.json
 
       - name: Upload Go test results
         if: (matrix.goarch == 'arm64' || matrix.goarch == 'amd64') &&  matrix.goos == 'linux'

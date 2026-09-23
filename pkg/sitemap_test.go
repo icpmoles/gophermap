@@ -222,7 +222,7 @@ func TestCreateSitemap(t *testing.T) {
 
 	var output bytes.Buffer
 	err = CreateSitemap(&output, root, "https://example.com",
-		types.AllowList(ExtensionsAllowList), types.UseExecutionTime(true))
+		types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,8 +253,8 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	var output bytes.Buffer
 	err := CreateSitemap(&output, filepath.Join(t.TempDir(), "missing"),
 		"https://example.com",
-		types.AllowList([]string{"pdf", "txt", "epub", "md"}),
-		types.UseExecutionTime(true))
+		types.WithAllowList([]string{"pdf", "txt", "epub", "md"}),
+		types.WithUseExecutionTime(true))
 
 	if err == nil {
 		t.Fatal("CreateSitemap() returned nil error for a missing directory")

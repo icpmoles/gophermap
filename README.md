@@ -19,13 +19,15 @@ gophermap -folder assets -o public/sitemap.xml -allow html -allow xml -allow xls
 
 gophermap - Generate sitemap of directory
 
-Usage: gophermap [-directory <folder> -output <output_file> -now -allow <ext>] <base_url>
+Usage: gophermap [-directory <folder> -changefreq <freq> -output <output_file> -now -allow <ext>] <base_url>
 
         Where <base_url> should be in the form 'https://example.com'
 
 Options:
   -allow value
         allowed extension (can be specified multiple times) (default 'md','pdf','txt','md')
+  -changefreq string
+        How often the file is esxpected to change, allowed values are: 'always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly' & 'never' (default "never")
   -directory string
         Directory to analyze (default ".")
   -now
@@ -40,13 +42,15 @@ Options:
 
   The absolute URL of your published site including the protocol, host, path, and a trailing slash.
 
+- **changefreq**: How often the file is esxpected to change, allowed values are: 'always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly' & 'never'. Refer to [the official specification](https://www.sitemaps.org/protocol.html#:~:text=than%202%2C048%20characters.-,%3Clastmod%3E,-optional).
+
 - **folder**: (optional) directory to explore 
 
 - **output**: (optional) output file
 
-- **now**: (optional) if enabled uses execution time as timestamp for <lastmod>. By default it uses the timestamp returned by the filesystem
+- **now**: (optional) if enabled uses execution time as timestamp for <lastmod>. By default it uses the timestamp returned by the filesystem. Refer to [the official documentation](https://www.sitemaps.org/protocol.html#:~:text=both%20sources%20differently.-,%3Cchangefreq%3E,-optional).
 
-- **allow**: (optional) extension to include
+- **allow**: (optional) extension to include. Can be repeated multiple times.
 
 ## Benchmarks
 
