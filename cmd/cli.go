@@ -43,21 +43,30 @@ func (s *cliStringList) Set(value string) error {
 
 func main() {
 	/* Parse CLI parameters*/
-	folderPtr := flag.String("directory", ".", "Directory to analyze")
+	// folderPtr := flag.String("directory", ".", "Directory to analyze")
 	sitemap := flag.String("output", "sitemap.xml", "output file")
 	changeFrequency := flag.String("changefreq", "never", "How often the file is esxpected to change, allowed values are: 'always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly' & 'never'")
 	now := flag.Bool("now", false, "use execution time as timestamp for <lastmod> field")
 
 	// we allow multiple allowed extensions
-	var allowed cliStringList
-	flag.Var(&allowed, "allow", "allowed extension to include (can be specified multiple times) (default 'md','pdf','txt','epub')")
+	var allowExt cliStringList
+	flag.Var(&allowExt, "allow", "allowed extension to include (can be specified multiple times) (default 'md','pdf','txt','epub')")
+
+	var allowFolder cliStringList
+	flag.Var(&allowFolder, "directory", "Directory to analyze")
 
 	flag.Usage = print_usage
 	flag.Parse()
 
-	if len(allowed) == 0 {
+	// default allowExt values
+	if len(allowExt) == 0 {
 		// default values
-		allowed = gophermap.ExtensionsAllowList
+		allowExt = gophermap.ExtensionsAllowList
+	}
+
+	// default folder value
+	if len(allowFolder) == 0 {
+		allowFolder = []string{"."}
 	}
 
 	args := flag.Args()
@@ -73,8 +82,8 @@ func main() {
 	}
 
 	start := time.Now()
-	err = gophermap.CreateSitemap(s_f, *folderPtr, url,
-		gmtypes.WithAllowList(allowed),
+	err = gophermap.CreateSitemap(s_f, allowFolder, url,
+		gmtypes.WithAllowList(allowExt),
 		gmtypes.WithUseExecutionTime(*now),
 		gmtypes.WithFrequencyFromString(*changeFrequency),
 	)

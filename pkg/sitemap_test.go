@@ -221,7 +221,7 @@ func TestCreateSitemap(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	err = CreateSitemap(&output, root, "https://example.com",
+	err = CreateSitemap(&output, []string{root}, "https://example.com",
 		types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(true))
 	if err != nil {
 		t.Fatal(err)
@@ -251,7 +251,7 @@ func TestCreateSitemap(t *testing.T) {
 
 func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	var output bytes.Buffer
-	err := CreateSitemap(&output, filepath.Join(t.TempDir(), "missing"),
+	err := CreateSitemap(&output, []string{filepath.Join(t.TempDir(), "missing")},
 		"https://example.com",
 		types.WithAllowList([]string{"pdf", "txt", "epub", "md"}),
 		types.WithUseExecutionTime(true))

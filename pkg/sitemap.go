@@ -80,12 +80,16 @@ func GetFlattenedFolder(explorePath string, allowList []string, timestamp *time.
 
 /*
 CreateSitemap:
-- explores the path provided with explorePath
+
+- explores the path(s) provided with explorePath
+
 - filters all the files with extension that respect the allowList. (See ExtensionsAllowList for an example)
+
 - calculates the final URL based on baseURL
+
 - writes the resulting XML content to wr
 */
-func CreateSitemap(wr io.Writer, explorePath string, baseURL string, setters ...types.Option) error {
+func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters ...types.Option) error {
 
 	// Default Options
 	args := &types.Options{
@@ -115,10 +119,19 @@ func CreateSitemap(wr io.Writer, explorePath string, baseURL string, setters ...
 		timestamp = nil
 	}
 
-	files, err := GetFlattenedFolder(explorePath, lowerAllowList, timestamp)
-	if err != nil {
-		return err
+	var files types.FlattenedFolder
+	for _, v := range explorePath {
+		folder_files, err := GetFlattenedFolder(v, lowerAllowList, timestamp)
+		if err != nil {
+			return err
+		}
+		files.Files = append(files.Files, folder_files.Files...)
 	}
+
+	// files, err := GetFlattenedFolder(explorePath, lowerAllowList, timestamp)
+	// if err != nil {
+	// 	return err
+	// }
 
 	fmt.Printf("Found %d suitable files\n", len(files.Files))
 
