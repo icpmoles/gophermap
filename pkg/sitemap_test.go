@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -213,15 +215,22 @@ func TestGetFlattenedFolderMissingPath(t *testing.T) {
 }
 
 func TestCreateSitemap(t *testing.T) {
-	root := t.TempDir()
-	filePath := filepath.Join(root, "notes.md")
-	err := os.WriteFile(filePath, []byte("notes"), 0o644)
-	if err != nil {
-		t.Fatal(err)
+	n_subfolder := 2
+	var filepaths = make([]string, n_subfolder)
+	var roots = make([]string, n_subfolder)
+
+	for i := range filepaths {
+		roots[i] = t.TempDir()
+		fmt.Printf("root %d: %s\n", i, roots[i])
+		filepaths[i] = filepath.Join(roots[i], strconv.Itoa(i)+"notes.md")
+		err := os.WriteFile(filepaths[i], []byte("notes"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	var output bytes.Buffer
-	err = CreateSitemap(&output, []string{root}, "https://example.com",
+	err := CreateSitemap(&output, roots, "https://example.com",
 		types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(true))
 	if err != nil {
 		t.Fatal(err)
@@ -238,15 +247,18 @@ func TestCreateSitemap(t *testing.T) {
 		t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
 	}
 
-	if len(sitemap.URLs) != 1 {
-		t.Fatalf("CreateSitemap() produced %d URLs, want 1", len(sitemap.URLs))
+	if len(sitemap.URLs) != 2 {
+		t.Fatalf("CreateSitemap() produced %d URLs, want 2", len(sitemap.URLs))
 	}
-	if got, want := sitemap.URLs[0].Location, "https://example.com/"+filePath; got != want {
-		t.Errorf("URL location = %q, want %q", got, want)
+	for index, filepath := range filepaths {
+		if got, want := sitemap.URLs[index].Location, "https://example.com/"+filepath; got != want {
+			t.Errorf("URL location = %q, want %q", got, want)
+		}
+		if sitemap.URLs[index].LastMod == "" {
+			t.Error("URL lastmod is empty")
+		}
 	}
-	if sitemap.URLs[0].LastMod == "" {
-		t.Error("URL lastmod is empty")
-	}
+
 }
 
 func TestCreateSitemapReturnsExplorationError(t *testing.T) {
@@ -278,8 +290,12 @@ func BenchmarkGetFlattenedFolder(b *testing.B) {
 		}
 	}
 
+	// NOTES: with 400 random directories:
+	// - with fixed timestamp:		1.288s
+	// - with filesystem timestamp:	1.380s
+	start := time.Now()
 	for b.Loop() {
-		_, err := GetFlattenedFolder(root, ExtensionsAllowList, nil)
+		_, err := GetFlattenedFolder(root, ExtensionsAllowList, &start)
 		if err != nil {
 			b.Fatal("GetFlattenedFolder() returned nil error")
 		}
