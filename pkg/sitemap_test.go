@@ -228,34 +228,35 @@ func TestCreateSitemap(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
-	var output bytes.Buffer
-	err := CreateSitemap(&output, roots, "https://example.com",
-		types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(true))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var sitemap struct {
-		URLs []struct {
-			Location   string `xml:"loc"`
-			LastMod    string `xml:"lastmod"`
-			Changefreq string `xml:"changefreq"`
-		} `xml:"url"`
-	}
-	if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
-		t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
-	}
-
-	if len(sitemap.URLs) != 2 {
-		t.Fatalf("CreateSitemap() produced %d URLs, want 2", len(sitemap.URLs))
-	}
-	for index, filepath := range filepaths {
-		if got, want := sitemap.URLs[index].Location, "https://example.com/"+filepath; got != want {
-			t.Errorf("URL location = %q, want %q", got, want)
+	for _, use_ex_time := range []bool{true, false} {
+		var output bytes.Buffer
+		err := CreateSitemap(&output, roots, "https://example.com",
+			types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(use_ex_time))
+		if err != nil {
+			t.Fatal(err)
 		}
-		if sitemap.URLs[index].LastMod == "" {
-			t.Error("URL lastmod is empty")
+
+		var sitemap struct {
+			URLs []struct {
+				Location   string `xml:"loc"`
+				LastMod    string `xml:"lastmod"`
+				Changefreq string `xml:"changefreq"`
+			} `xml:"url"`
+		}
+		if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
+			t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
+		}
+
+		if len(sitemap.URLs) != 2 {
+			t.Fatalf("CreateSitemap() produced %d URLs, want 2", len(sitemap.URLs))
+		}
+		for index, filepath := range filepaths {
+			if got, want := sitemap.URLs[index].Location, "https://example.com/"+filepath; got != want {
+				t.Errorf("URL location = %q, want %q", got, want)
+			}
+			if sitemap.URLs[index].LastMod == "" {
+				t.Error("URL lastmod is empty")
+			}
 		}
 	}
 
