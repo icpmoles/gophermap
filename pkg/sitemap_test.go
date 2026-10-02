@@ -353,12 +353,13 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 }
 
 func TestCreateSitemapErrorTooBig(t *testing.T) {
-	root := t.TempDir()
-	paths := generateRandomDirectory(50001)
+	// lower the limit so we don't have to create 50k files
+	defaultMax := maxSitemapURLs
+	maxSitemapURLs = 10
+	t.Cleanup(func() { maxSitemapURLs = defaultMax })
 
-	if testing.Short() {
-		t.Skip("skipping creation of 100k files in short mode")
-	}
+	root := t.TempDir()
+	paths := generateRandomDirectory(maxSitemapURLs + 1)
 
 	for _, path := range paths {
 		fullPath := filepath.Join(root, path.path)
@@ -377,12 +378,40 @@ func TestCreateSitemapErrorTooBig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(logs.String(), "count=50001") {
-		t.Errorf("CreateSitemap() did not report 50001 suitable files, logs:\n%s", logs.String())
+	if !strings.Contains(logs.String(), "count=11") {
+		t.Errorf("CreateSitemap() did not report 11 suitable files, logs:\n%s", logs.String())
 	}
 	if !strings.Contains(logs.String(), "level=ERROR") ||
 		!strings.Contains(logs.String(), "too many files for sitemap") {
 		t.Errorf("CreateSitemap() did not log a too-many-files error, logs:\n%s", logs.String())
+	}
+}
+
+func TestCreateSitemapAtLimit(t *testing.T) {
+	defaultMax := maxSitemapURLs
+	maxSitemapURLs = 10
+	t.Cleanup(func() { maxSitemapURLs = defaultMax })
+
+	root := t.TempDir()
+	for _, path := range generateRandomDirectory(maxSitemapURLs) {
+		fullPath := filepath.Join(root, path.path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var output, logs bytes.Buffer
+	err := CreateSitemap(&output, []string{root}, "https://example.com",
+		types.WithLogger(slog.New(slog.NewTextHandler(&logs, nil))))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(logs.String(), "level=ERROR") {
+		t.Errorf("CreateSitemap() logged an error at exactly the limit, logs:\n%s", logs.String())
 	}
 }
 
@@ -400,14 +429,23 @@ func BenchmarkGetFlattenedFolder(b *testing.B) {
 		}
 	}
 
-	// NOTES: with 400 random directories:
-	// - with fixed timestamp:		1.288s
-	// - with filesystem timestamp:	1.380s
 	start := time.Now()
-	for b.Loop() {
-		_, err := GetFlattenedFolder(root, ExtensionsAllowList, &start)
-		if err != nil {
-			b.Fatal("GetFlattenedFolder() returned nil error")
-		}
+	benchmarks := []struct {
+		name      string
+		timestamp *time.Time
+	}{
+		{"fixed", &start},   // same timestamp for every file
+		{"filesystem", nil}, // reads the modification time of each file
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for b.Loop() {
+				_, err := GetFlattenedFolder(root, ExtensionsAllowList, bm.timestamp)
+				if err != nil {
+					b.Fatalf("GetFlattenedFolder() returned error: %v", err)
+				}
+			}
+		})
 	}
 }

@@ -20,6 +20,10 @@ import (
 // Default allowed extensions
 var ExtensionsAllowList = []string{"pdf", "txt", "epub", "md"}
 
+// Maximum number of URLs allowed in a single sitemap, see https://www.sitemaps.org/protocol.html
+// It's a variable so tests can lower it instead of creating 50k files
+var maxSitemapURLs = 50_000
+
 /*
 Checks if the file has the correct extension.
 Expects a list of lowercase extensions
@@ -49,14 +53,13 @@ func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 	}
 
 	if !d.IsDir() && isAllowedFile(path, allowList) {
-		info, err := d.Info()
-
-		if err != nil {
-			return fmt.Errorf("Getting file info for %q: %w", path, err)
-		}
-
 		var LastModTimestamp time.Time
 		if timestamp == nil {
+			// only stat the file when we actually need its modification time
+			info, err := d.Info()
+			if err != nil {
+				return fmt.Errorf("Getting file info for %q: %w", path, err)
+			}
 			LastModTimestamp = info.ModTime().UTC()
 		} else {
 			LastModTimestamp = *timestamp
@@ -157,8 +160,8 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 	total_files := len(files.Files)
 	args.Logger.Info("found suitable files", "count", total_files)
 
-	if total_files > 50_000 {
-		args.Logger.Error("too many files for sitemap (max: 50,000 files)")
+	if total_files > maxSitemapURLs {
+		args.Logger.Error("too many files for sitemap", "count", total_files, "max", maxSitemapURLs)
 	}
 
 	site := types.SiteStructure{
