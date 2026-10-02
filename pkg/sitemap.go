@@ -38,10 +38,34 @@ Escapes the characters that aren't allowed in XML text (&, <, >, quotes, ...).
 text/template doesn't do it for us
 */
 func escapeXML(s string) string {
+	if !needsXMLEscape(s) {
+		// most file names have nothing to escape: return them as-is without allocating
+		return s
+	}
+
 	var b strings.Builder
 	// writing to a strings.Builder never fails
 	_ = xml.EscapeText(&b, []byte(s))
 	return b.String()
+}
+
+/*
+Reports whether xml.EscapeText could change s.
+Only printable ASCII without &, <, >, " and ' is considered safe, anything else
+(control characters, non-ASCII, invalid UTF-8) is left to xml.EscapeText
+*/
+func needsXMLEscape(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c < 0x20 || c > 0x7e {
+			return true
+		}
+		switch c {
+		case '&', '<', '>', '"', '\'':
+			return true
+		}
+	}
+	return false
 }
 
 /*
@@ -149,11 +173,17 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 	wg.Wait()
 
 	// reconsruct the results and checks for errors
-	var files types.FlattenedFolder
+	total := 0
 	for i := range explorePath {
 		if errs[i] != nil {
 			return errs[i]
 		}
+		total += len(results[i].Files)
+	}
+
+	// allocate once instead of growing the slice folder after folder
+	files := types.FlattenedFolder{Files: make([]types.File, 0, total)}
+	for i := range results {
 		files.Files = append(files.Files, results[i].Files...)
 	}
 

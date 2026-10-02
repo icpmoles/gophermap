@@ -277,6 +277,10 @@ func TestEscapeXML(t *testing.T) {
 		{"it's.md", "it&#39;s.md"},
 		{"&amp;.md", "&amp;amp;.md"}, // already escaped text is escaped again
 		{"caffè.md", "caffè.md"},     // non-ASCII is valid XML
+		{"tab\there.md", "tab&#x9;here.md"},
+		{"new\nline.md", "new&#xA;line.md"},
+		{"bell\x07.md", "bell\uFFFD.md"},       // invalid XML character is replaced
+		{"bad\xffutf8.md", "bad\uFFFDutf8.md"}, // invalid UTF-8 is replaced
 	}
 
 	for _, test := range tests {
@@ -285,6 +289,15 @@ func TestEscapeXML(t *testing.T) {
 				t.Fatalf("escapeXML(%q) = %q, want %q", test.input, got, test.want)
 			}
 		})
+	}
+}
+
+func TestEscapeXMLNoAllocWhenClean(t *testing.T) {
+	allocs := testing.AllocsPerRun(100, func() {
+		escapeXML("docs/some-file_name.v2.md")
+	})
+	if allocs != 0 {
+		t.Errorf("escapeXML() on a name without special characters allocated %v times, want 0", allocs)
 	}
 }
 
