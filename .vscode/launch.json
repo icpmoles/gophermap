@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd",
-            "args": "https://example.com",
+            "args": ["-directory","target/a","-directory","target/b","https://example.com"],
             "cwd": "${workspaceFolder}"
         }
     ]

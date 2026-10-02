@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 )
@@ -119,19 +120,25 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		timestamp = nil
 	}
 
-	var files types.FlattenedFolder
-	for _, v := range explorePath {
-		folder_files, err := GetFlattenedFolder(v, lowerAllowList, timestamp)
-		if err != nil {
-			return err
-		}
-		files.Files = append(files.Files, folder_files.Files...)
+	// use go routines, one for each path
+	results := make([]types.FlattenedFolder, len(explorePath))
+	errs := make([]error, len(explorePath))
+	var wg sync.WaitGroup
+	for i, v := range explorePath {
+		wg.Go(func() {
+			results[i], errs[i] = GetFlattenedFolder(v, lowerAllowList, timestamp)
+		})
 	}
+	wg.Wait()
 
-	// files, err := GetFlattenedFolder(explorePath, lowerAllowList, timestamp)
-	// if err != nil {
-	// 	return err
-	// }
+	// reconsruct the results and checks for errors
+	var files types.FlattenedFolder
+	for i := range explorePath {
+		if errs[i] != nil {
+			return errs[i]
+		}
+		files.Files = append(files.Files, results[i].Files...)
+	}
 
 	fmt.Printf("Found %d suitable files\n", len(files.Files))
 
