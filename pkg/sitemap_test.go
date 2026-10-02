@@ -262,6 +262,80 @@ func TestCreateSitemap(t *testing.T) {
 
 }
 
+func TestEscapeXML(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"notes.md", "notes.md"},
+		{"docs/readme.md", "docs/readme.md"},
+		{"", ""},
+		{"Q&A.md", "Q&amp;A.md"},
+		{"<draft>.md", "&lt;draft&gt;.md"},
+		{`"quoted".md`, "&#34;quoted&#34;.md"},
+		{"it's.md", "it&#39;s.md"},
+		{"&amp;.md", "&amp;amp;.md"}, // already escaped text is escaped again
+		{"caffè.md", "caffè.md"},     // non-ASCII is valid XML
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			if got := escapeXML(test.input); got != test.want {
+				t.Fatalf("escapeXML(%q) = %q, want %q", test.input, got, test.want)
+			}
+		})
+	}
+}
+
+func TestGetFlattenedFolderEscapesNames(t *testing.T) {
+	root := t.TempDir()
+	filename := "Q&A <draft>.md"
+	if err := os.WriteFile(filepath.Join(root, filename), []byte("notes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := GetFlattenedFolder(root, []string{"md"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got.Files) != 1 {
+		t.Fatalf("GetFlattenedFolder() found %d files, want 1", len(got.Files))
+	}
+	if got, want := got.Files[0].Name, filepath.Join(root, "Q&amp;A &lt;draft&gt;.md"); got != want {
+		t.Errorf("file name = %q, want %q", got, want)
+	}
+}
+
+func TestCreateSitemapEscapesXML(t *testing.T) {
+	root := t.TempDir()
+	filename := `Q&A <draft> "it's".md`
+	if err := os.WriteFile(filepath.Join(root, filename), []byte("notes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := CreateSitemap(&output, []string{root}, "https://example.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	var sitemap struct {
+		URLs []struct {
+			Location string `xml:"loc"`
+		} `xml:"url"`
+	}
+	if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
+		t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
+	}
+
+	if len(sitemap.URLs) != 1 {
+		t.Fatalf("CreateSitemap() produced %d URLs, want 1", len(sitemap.URLs))
+	}
+	if got, want := sitemap.URLs[0].Location, "https://example.com/"+filepath.Join(root, filename); got != want {
+		t.Errorf("URL location = %q, want %q", got, want)
+	}
+}
+
 func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	var output bytes.Buffer
 	err := CreateSitemap(&output, []string{filepath.Join(t.TempDir(), "missing")},

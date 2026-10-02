@@ -4,6 +4,7 @@ import (
 	"github.com/icpmoles/gophermap/assets"
 	"github.com/icpmoles/gophermap/types"
 
+	"encoding/xml"
 	"fmt"
 	"io"
 	"io/fs"
@@ -29,6 +30,17 @@ func isAllowedFile(path string, allowList *[]string) bool {
 }
 
 /*
+Escapes the characters that aren't allowed in XML text (&, <, >, quotes, ...).
+text/template doesn't do it for us
+*/
+func escapeXML(s string) string {
+	var b strings.Builder
+	// writing to a strings.Builder never fails
+	_ = xml.EscapeText(&b, []byte(s))
+	return b.String()
+}
+
+/*
 fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
 */
 func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *types.FlattenedFolder, timestamp *time.Time) error {
@@ -51,7 +63,7 @@ func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 		}
 
 		file := types.File{
-			Name:    path,
+			Name:    escapeXML(path),
 			LastMod: LastModTimestamp,
 		}
 
