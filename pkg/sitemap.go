@@ -154,7 +154,12 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		files.Files = append(files.Files, results[i].Files...)
 	}
 
-	args.Logger.Info("found suitable files", "count", len(files.Files))
+	total_files := len(files.Files)
+	args.Logger.Info("found suitable files", "count", total_files)
+
+	if total_files > 50_000 {
+		args.Logger.Error("too many files for sitemap (max: 50,000 files)")
+	}
 
 	site := types.SiteStructure{
 		Files:      files,

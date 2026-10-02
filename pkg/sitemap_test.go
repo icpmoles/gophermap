@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -348,6 +349,40 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("CreateSitemap() error = %v, want an os.ErrNotExist cause", err)
+	}
+}
+
+func TestCreateSitemapErrorTooBig(t *testing.T) {
+	root := t.TempDir()
+	paths := generateRandomDirectory(50001)
+
+	if testing.Short() {
+		t.Skip("skipping creation of 100k files in short mode")
+	}
+
+	for _, path := range paths {
+		fullPath := filepath.Join(root, path.path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var output, logs bytes.Buffer
+	err := CreateSitemap(&output, []string{root}, "https://example.com",
+		types.WithLogger(slog.New(slog.NewTextHandler(&logs, nil))))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(logs.String(), "count=50001") {
+		t.Errorf("CreateSitemap() did not report 50001 suitable files, logs:\n%s", logs.String())
+	}
+	if !strings.Contains(logs.String(), "level=ERROR") ||
+		!strings.Contains(logs.String(), "too many files for sitemap") {
+		t.Errorf("CreateSitemap() did not log a too-many-files error, logs:\n%s", logs.String())
 	}
 }
 

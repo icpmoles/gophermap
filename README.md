@@ -52,6 +52,10 @@ Options:
 
 - **allow**: (optional) extension to include. Can be repeated multiple times.
 
+## Limitations
+
+- The program doesn't support "Sitemap index files" so you're limited to 50,000 files.
+
 ## Benchmarks
 
 Tested on my own personal *Downloads* folder with approximately 6786 directories & 64515 files
