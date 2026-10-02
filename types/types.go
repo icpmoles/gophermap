@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -50,6 +51,7 @@ type Options struct {
 	AllowList        []string
 	UseExecutionTime bool
 	Frequency        SiteMapFrequency
+	Logger           *slog.Logger
 }
 
 type Option func(*Options)
@@ -70,6 +72,13 @@ func WithUseExecutionTime(useExecutionTime bool) Option {
 func WithFrequency(f SiteMapFrequency) Option {
 	return func(args *Options) {
 		args.Frequency = f
+	}
+}
+
+// logger used for progress messages, by default nothing is logged
+func WithLogger(logger *slog.Logger) Option {
+	return func(args *Options) {
+		args.Logger = logger
 	}
 }
 

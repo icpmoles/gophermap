@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -213,25 +216,126 @@ func TestGetFlattenedFolderMissingPath(t *testing.T) {
 }
 
 func TestCreateSitemap(t *testing.T) {
+	n_subfolder := 2
+	var filepaths = make([]string, n_subfolder)
+	var roots = make([]string, n_subfolder)
+
+	for i := range filepaths {
+		roots[i] = t.TempDir()
+		fmt.Printf("root %d: %s\n", i, roots[i])
+		filepaths[i] = filepath.Join(roots[i], strconv.Itoa(i)+"notes.md")
+		err := os.WriteFile(filepaths[i], []byte("notes"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, use_ex_time := range []bool{true, false} {
+		var output bytes.Buffer
+		err := CreateSitemap(&output, roots, "https://example.com",
+			types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(use_ex_time))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var sitemap struct {
+			URLs []struct {
+				Location   string `xml:"loc"`
+				LastMod    string `xml:"lastmod"`
+				Changefreq string `xml:"changefreq"`
+			} `xml:"url"`
+		}
+		if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
+			t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
+		}
+
+		if len(sitemap.URLs) != 2 {
+			t.Fatalf("CreateSitemap() produced %d URLs, want 2", len(sitemap.URLs))
+		}
+		for index, filepath := range filepaths {
+			if got, want := sitemap.URLs[index].Location, "https://example.com/"+filepath; got != want {
+				t.Errorf("URL location = %q, want %q", got, want)
+			}
+			if sitemap.URLs[index].LastMod == "" {
+				t.Error("URL lastmod is empty")
+			}
+		}
+	}
+
+}
+
+func TestEscapeXML(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"notes.md", "notes.md"},
+		{"docs/readme.md", "docs/readme.md"},
+		{"", ""},
+		{"Q&A.md", "Q&amp;A.md"},
+		{"<draft>.md", "&lt;draft&gt;.md"},
+		{`"quoted".md`, "&#34;quoted&#34;.md"},
+		{"it's.md", "it&#39;s.md"},
+		{"&amp;.md", "&amp;amp;.md"}, // already escaped text is escaped again
+		{"caffè.md", "caffè.md"},     // non-ASCII is valid XML
+		{"tab\there.md", "tab&#x9;here.md"},
+		{"new\nline.md", "new&#xA;line.md"},
+		{"bell\x07.md", "bell\uFFFD.md"},       // invalid XML character is replaced
+		{"bad\xffutf8.md", "bad\uFFFDutf8.md"}, // invalid UTF-8 is replaced
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			if got := escapeXML(test.input); got != test.want {
+				t.Fatalf("escapeXML(%q) = %q, want %q", test.input, got, test.want)
+			}
+		})
+	}
+}
+
+func TestEscapeXMLNoAllocWhenClean(t *testing.T) {
+	allocs := testing.AllocsPerRun(100, func() {
+		escapeXML("docs/some-file_name.v2.md")
+	})
+	if allocs != 0 {
+		t.Errorf("escapeXML() on a name without special characters allocated %v times, want 0", allocs)
+	}
+}
+
+func TestGetFlattenedFolderEscapesNames(t *testing.T) {
 	root := t.TempDir()
-	filePath := filepath.Join(root, "notes.md")
-	err := os.WriteFile(filePath, []byte("notes"), 0o644)
+	filename := "Q&A <draft>.md"
+	if err := os.WriteFile(filepath.Join(root, filename), []byte("notes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := GetFlattenedFolder(root, []string{"md"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	if len(got.Files) != 1 {
+		t.Fatalf("GetFlattenedFolder() found %d files, want 1", len(got.Files))
+	}
+	if got, want := got.Files[0].Name, filepath.Join(root, "Q&amp;A &lt;draft&gt;.md"); got != want {
+		t.Errorf("file name = %q, want %q", got, want)
+	}
+}
+
+func TestCreateSitemapEscapesXML(t *testing.T) {
+	root := t.TempDir()
+	filename := `Q&A <draft> "it's".md`
+	if err := os.WriteFile(filepath.Join(root, filename), []byte("notes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	var output bytes.Buffer
-	err = CreateSitemap(&output, root, "https://example.com",
-		types.WithAllowList(ExtensionsAllowList), types.WithUseExecutionTime(true))
-	if err != nil {
+	if err := CreateSitemap(&output, []string{root}, "https://example.com"); err != nil {
 		t.Fatal(err)
 	}
 
 	var sitemap struct {
 		URLs []struct {
-			Location   string `xml:"loc"`
-			LastMod    string `xml:"lastmod"`
-			Changefreq string `xml:"changefreq"`
+			Location string `xml:"loc"`
 		} `xml:"url"`
 	}
 	if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
@@ -241,17 +345,14 @@ func TestCreateSitemap(t *testing.T) {
 	if len(sitemap.URLs) != 1 {
 		t.Fatalf("CreateSitemap() produced %d URLs, want 1", len(sitemap.URLs))
 	}
-	if got, want := sitemap.URLs[0].Location, "https://example.com/"+filePath; got != want {
+	if got, want := sitemap.URLs[0].Location, "https://example.com/"+filepath.Join(root, filename); got != want {
 		t.Errorf("URL location = %q, want %q", got, want)
-	}
-	if sitemap.URLs[0].LastMod == "" {
-		t.Error("URL lastmod is empty")
 	}
 }
 
 func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	var output bytes.Buffer
-	err := CreateSitemap(&output, filepath.Join(t.TempDir(), "missing"),
+	err := CreateSitemap(&output, []string{filepath.Join(t.TempDir(), "missing")},
 		"https://example.com",
 		types.WithAllowList([]string{"pdf", "txt", "epub", "md"}),
 		types.WithUseExecutionTime(true))
@@ -261,6 +362,69 @@ func TestCreateSitemapReturnsExplorationError(t *testing.T) {
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("CreateSitemap() error = %v, want an os.ErrNotExist cause", err)
+	}
+}
+
+func TestCreateSitemapErrorTooBig(t *testing.T) {
+	// lower the limit so we don't have to create 50k files
+	defaultMax := maxSitemapURLs
+	maxSitemapURLs = 10
+	t.Cleanup(func() { maxSitemapURLs = defaultMax })
+
+	root := t.TempDir()
+	paths := generateRandomDirectory(maxSitemapURLs + 1)
+
+	for _, path := range paths {
+		fullPath := filepath.Join(root, path.path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var output, logs bytes.Buffer
+	err := CreateSitemap(&output, []string{root}, "https://example.com",
+		types.WithLogger(slog.New(slog.NewTextHandler(&logs, nil))))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(logs.String(), "count=11") {
+		t.Errorf("CreateSitemap() did not report 11 suitable files, logs:\n%s", logs.String())
+	}
+	if !strings.Contains(logs.String(), "level=ERROR") ||
+		!strings.Contains(logs.String(), "too many files for sitemap") {
+		t.Errorf("CreateSitemap() did not log a too-many-files error, logs:\n%s", logs.String())
+	}
+}
+
+func TestCreateSitemapAtLimit(t *testing.T) {
+	defaultMax := maxSitemapURLs
+	maxSitemapURLs = 10
+	t.Cleanup(func() { maxSitemapURLs = defaultMax })
+
+	root := t.TempDir()
+	for _, path := range generateRandomDirectory(maxSitemapURLs) {
+		fullPath := filepath.Join(root, path.path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var output, logs bytes.Buffer
+	err := CreateSitemap(&output, []string{root}, "https://example.com",
+		types.WithLogger(slog.New(slog.NewTextHandler(&logs, nil))))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(logs.String(), "level=ERROR") {
+		t.Errorf("CreateSitemap() logged an error at exactly the limit, logs:\n%s", logs.String())
 	}
 }
 
@@ -278,10 +442,23 @@ func BenchmarkGetFlattenedFolder(b *testing.B) {
 		}
 	}
 
-	for b.Loop() {
-		_, err := GetFlattenedFolder(root, ExtensionsAllowList, nil)
-		if err != nil {
-			b.Fatal("GetFlattenedFolder() returned nil error")
-		}
+	start := time.Now()
+	benchmarks := []struct {
+		name      string
+		timestamp *time.Time
+	}{
+		{"fixed", &start},   // same timestamp for every file
+		{"filesystem", nil}, // reads the modification time of each file
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for b.Loop() {
+				_, err := GetFlattenedFolder(root, ExtensionsAllowList, bm.timestamp)
+				if err != nil {
+					b.Fatalf("GetFlattenedFolder() returned error: %v", err)
+				}
+			}
+		})
 	}
 }
