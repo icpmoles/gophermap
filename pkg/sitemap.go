@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -97,13 +98,14 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		AllowList:        ExtensionsAllowList,
 		UseExecutionTime: false,
 		Frequency:        types.Never,
+		Logger:           slog.New(slog.DiscardHandler),
 	}
 
 	for _, setter := range setters {
 		setter(args)
 	}
 
-	fmt.Println("Exploring ", explorePath)
+	args.Logger.Info("exploring", "paths", explorePath)
 
 	lowerAllowList := make([]string, len(args.AllowList))
 
@@ -140,7 +142,7 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		files.Files = append(files.Files, results[i].Files...)
 	}
 
-	fmt.Printf("Found %d suitable files\n", len(files.Files))
+	args.Logger.Info("found suitable files", "count", len(files.Files))
 
 	site := types.SiteStructure{
 		Files:      files,

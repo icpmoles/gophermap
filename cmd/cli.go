@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -86,6 +87,7 @@ func main() {
 		gmtypes.WithAllowList(allowExt),
 		gmtypes.WithUseExecutionTime(*now),
 		gmtypes.WithFrequencyFromString(*changeFrequency),
+		gmtypes.WithLogger(slog.New(slog.NewTextHandler(os.Stderr, nil))),
 	)
 
 	if err != nil {
