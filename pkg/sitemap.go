@@ -90,7 +90,7 @@ func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 		}
 
 		file := types.File{
-			Name:    escapeXML(path),
+			Name:    filepath.ToSlash(escapeXML(path)),
 			LastMod: LastModTimestamp,
 		}
 
