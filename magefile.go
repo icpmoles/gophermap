@@ -129,7 +129,7 @@ func compile(t target, version string, release bool) (string, error) {
 		filename += ".exe"
 	}
 
-	args := []string{"build", "-v", "-o", filepath.Join("dist", nameTriplet, filename)}
+	args := []string{"build", "-o", filepath.Join("dist", nameTriplet, filename)}
 	if release {
 		fmt.Println("Building release", nameTriplet, version)
 		// strip symbols and DWARF, drop local paths, apply cmd/default.pgo if present
