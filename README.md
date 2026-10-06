@@ -75,6 +75,27 @@ The CPU architecture include x64 & ARM64 for all OS.
 Specifically for Linux there are additional ARMv5/ARMv6/ARMv7 builds meant for low memory devices like Raspberry Pi running on 32 bit distros.
 
 
+### How to build
+
+Both methods require go 1.27+
+
+**With Mage**
+
+
+```bash
+go tool mage build      # current platform
+go tool mage buildAll   # all release targets
+```
+
+The final binary will be in `dist/gophermap-os-arch/`
+
+**Go build**
+
+```bash
+go build -o dist/gophermap ./cmd
+```
+
+
 ## Credits
 
 - Sitemap template taken from [Hugo CMS](https://github.com/gohugoio/hugo/blob/master/tpl/tplimpl/embedded/templates/sitemap.xml) (Apache-2)
