@@ -2,7 +2,7 @@
 
 //mage:multiline
 
-// Set the general description you want to have displayed with mage -l here.
+// Build the gophermap package
 package main
 
 import (
@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"golang.org/x/sys/cpu"
-	// mg contains helpful utility functions, like Deps
 )
 
 // Default target to run when none is specified
@@ -46,27 +45,30 @@ var targets = []target{
 	{"linux", "arm", 5},
 }
 
-// Builds and packages gophermap for the host platform into dist/
+// Builds a debug gophermap for the host platform into dist/ (full debug info, no optimizations)
 func Build() error {
-	version, err := buildVersion()
-	if err != nil {
-		return err
-	}
-	return build(target{runtime.GOOS, runtime.GOARCH, hostGoarm()}, version)
+	_, err := compile(hostTarget(), buildVersion(), false)
+	return err
 }
 
-// Builds and packages gophermap for every release target into dist/
+// Builds an optimized gophermap for the host platform and packages it into dist/
+func BuildRelease() error {
+	return release(hostTarget(), buildVersion())
+}
+
+// Builds optimized gophermap for every release target and packages them into dist/
 func BuildAll() error {
-	version, err := buildVersion()
-	if err != nil {
-		return err
-	}
+	version := buildVersion()
 	for _, t := range targets {
-		if err := build(t, version); err != nil {
+		if err := release(t, version); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func hostTarget() target {
+	return target{runtime.GOOS, runtime.GOARCH, hostGoarm()}
 }
 
 // hostGoarm returns the GOARM level supported by the host CPU, or 0 when not
@@ -90,16 +92,17 @@ func hostGoarm() int {
 }
 
 // buildVersion returns <tag>-<date>-<sha> when HEAD is tagged, <date>-<sha> otherwise.
-func buildVersion() (string, error) {
+// Without git (or outside a git checkout) it falls back to just <date>.
+func buildVersion() string {
 	date := time.Now().UTC().Format("20060102")
 	sha, err := git("rev-parse", "--short=7", "HEAD")
 	if err != nil {
-		return "", fmt.Errorf("reading commit: %w", err)
+		return date
 	}
 	if tag, err := git("describe", "--tags", "--exact-match", "HEAD"); err == nil {
-		return tag + "-" + date + "-" + sha, nil
+		return tag + "-" + date + "-" + sha
 	}
-	return date + "-" + sha, nil
+	return date + "-" + sha
 }
 
 func git(args ...string) (string, error) {
@@ -107,7 +110,16 @@ func git(args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-func build(t target, version string) error {
+func release(t target, version string) error {
+	nameTriplet, err := compile(t, version, true)
+	if err != nil {
+		return err
+	}
+	return tarGz(filepath.Join("dist", "release-"+nameTriplet+".tar.gz"), "dist", nameTriplet)
+}
+
+// compile builds gophermap for t into dist/<nameTriplet>/ and returns nameTriplet.
+func compile(t target, version string, release bool) (string, error) {
 	nameTriplet := "gophermap-" + t.goos + "-" + t.goarch
 	if t.goarch == "arm" {
 		nameTriplet += "v" + strconv.Itoa(t.goarm)
@@ -116,13 +128,20 @@ func build(t target, version string) error {
 	if t.goos == "windows" {
 		filename += ".exe"
 	}
-	fmt.Println("Building", nameTriplet, version)
 
-	cmd := exec.Command("go", "build",
-		"-ldflags=-s -w -X main.Version="+version,
-		"-trimpath", "-v",
-		"-o", filepath.Join("dist", nameTriplet, filename),
-		"cmd/cli.go")
+	args := []string{"build", "-v", "-o", filepath.Join("dist", nameTriplet, filename)}
+	if release {
+		fmt.Println("Building release", nameTriplet, version)
+		// strip symbols and DWARF, drop local paths, apply cmd/default.pgo if present
+		args = append(args, "-trimpath", "-pgo=auto", "-ldflags=-s -w -X main.Version="+version)
+	} else {
+		fmt.Println("Building debug", nameTriplet, version)
+		// keep DWARF and disable optimizations and inlining so debuggers can step through
+		args = append(args, "-gcflags=all=-N -l", "-ldflags=-X main.Version="+version+"-debug")
+	}
+	args = append(args, "./cmd")
+
+	cmd := exec.Command("go", args...)
 	cmd.Env = append(os.Environ(), "GOOS="+t.goos, "GOARCH="+t.goarch, "CGO_ENABLED=0")
 	if t.goarch == "arm" {
 		cmd.Env = append(cmd.Env, "GOARM="+strconv.Itoa(t.goarm))
@@ -130,10 +149,9 @@ func build(t target, version string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("building %s: %w", nameTriplet, err)
+		return "", fmt.Errorf("building %s: %w", nameTriplet, err)
 	}
-
-	return tarGz(filepath.Join("dist", "release-"+nameTriplet+".tar.gz"), "dist", nameTriplet)
+	return nameTriplet, nil
 }
 
 // tarGz archives dir (relative to root) into dst, like `tar -czf dst -C root dir`.
@@ -193,20 +211,6 @@ func tarGz(dst, root, dir string) error {
 	}
 	return f.Close()
 }
-
-// A custom install step if you need your bin someplace other than go/bin
-// func Install() error {
-// 	mg.Deps(Build)
-// 	fmt.Println("Installing...")
-// 	return os.Rename("./MyApp", "/usr/bin/MyApp")
-// }
-
-// Manage your deps, or running package managers.
-// func InstallDeps() error {
-// 	fmt.Println("Installing Deps...")
-// 	cmd := exec.Command("go", "get", "github.com/stretchr/piglatin")
-// 	return cmd.Run()
-// }
 
 // Clean up after yourself
 func Clean() {

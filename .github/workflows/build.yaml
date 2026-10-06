@@ -55,90 +55,29 @@ jobs:
   build:
     needs: test-build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ['1.27.1']
-        goos: [windows, darwin, linux]
-        goarch: [amd64, arm64]
-        include:
-        - goos: linux
-          goarch: arm
-          goarm: 7
-          go-version: 1.27.1
-        - goos: linux
-          goarch: arm
-          goarm: 6
-          go-version: 1.27.1
-        - goos: linux
-          goarch: arm
-          goarm: 5
-          go-version: 1.27.1
-
+    env:
+      GO_VERSION: '1.27.1'
     steps:
       - uses: actions/checkout@v6
-      - name: Setup Go ${{ matrix.go-version }}
+      - name: Setup Go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: ${{ env.GO_VERSION }}
 
+      # targets, flags and versioning live in magefile.go (mage buildAll)
       - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm }}
-          CGO_ENABLED: 0
-        run: |
-          BUILD_DATE=$(date -u +'%Y%m%d')
-          SHORT_SHA="${GITHUB_SHA::7}"
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            VERSION="${{ github.ref_name }}-${BUILD_DATE}-${SHORT_SHA}"
-          else
-            VERSION="${BUILD_DATE}-${SHORT_SHA}"
-          fi
+        run: go tool mage buildAll
 
-          if [ "${{ matrix.goarch }}" = "arm" ]; then
-            name_triplet="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}v${{ matrix.goarm }}"
-          else
-            name_triplet="gophermap-${{ matrix.goos }}-${{ matrix.goarch }}"
-          fi
-
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            filename="${name_triplet}/gophermap.exe"
-          else
-            filename="${name_triplet}/gophermap"
-          fi
-
-          mkdir -p dist
-          output_path=dist/$name_triplet
-
-          go build \
-            -ldflags="-s -w -X main.Version=${VERSION}" \
-            -trimpath -v \
-            -o "dist/$filename" cmd/cli.go
-
-          tar -cvz -f dist/release-$name_triplet.tar.gz \
-            -C dist "$name_triplet" 
-
-      - name: Publish artifact 
+      - name: Publish artifact
         uses: actions/upload-artifact@v4
-        if: matrix.goarm == ''
         with:
-          name: gophermap-${{ matrix.goos }}-${{ matrix.goarch }}(go-${{ matrix.go-version }})
+          name: gophermap-go-${{ env.GO_VERSION }}
           path: dist/release-**.tar.gz
           retention-days: 7
 
-
-      - name: Publish artifact (ARM)
-        uses: actions/upload-artifact@v4
-        if: matrix.goarm != ''
-        with:
-          name: gophermap-${{ matrix.goos }}-${{ matrix.goarch }}v${{ matrix.goarm }}(go-${{ matrix.go-version }})
-          path: dist/release-**.tar.gz
-          retention-days: 7
-          
       - name: Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.03
-        if: github.ref_type == 'tag' && matrix.go-version == '1.27.1'
+        if: github.ref_type == 'tag'
         with:
           files: |
             dist/release-**.tar.gz
