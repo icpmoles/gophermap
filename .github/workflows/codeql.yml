@@ -41,8 +41,7 @@ jobs:
         run: |
            go build \
             -ldflags="-s -w -X main.Version="TEST_VERSION"" \
-            -trimpath -v \
-            -o cli_gophermap ./...
+            -trimpath -v ./...
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
