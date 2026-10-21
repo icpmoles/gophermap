@@ -33,6 +33,12 @@ jobs:
             --junitfile "TestResults-${{ matrix.go-version }}.xml" \
             -- -race ./...
 
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d
+        if: always()
+        with:
+          files: |
+            TestResults-*.xml
 
       # always() to upload results also incase of failure
       - name: Upload Go test results
