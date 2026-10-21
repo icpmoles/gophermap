@@ -9,8 +9,6 @@ on:
     - cron: '30 6 * * 1'
   workflow_dispatch:
 
-permissions:
-  contents: read
 
 jobs:
   analyze:
@@ -19,6 +17,8 @@ jobs:
 
     permissions:
       contents: read
+      checks: write
+      pull-requests: write
       security-events: write
 
     steps:
@@ -29,6 +29,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
+      
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@v1.13.0
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -42,6 +45,28 @@ jobs:
            go build \
             -ldflags="-s -w -X main.Version="TEST_VERSION"" \
             -trimpath -v ./...
+
+      - name: Go Tests
+        run: |
+          gotestsum \
+            --format standard-verbose \
+            --junitfile "TestResults-${{ matrix.go-version }}.xml" \
+            -- -race ./...
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d
+        if: always()
+        with:
+          files: |
+            TestResults-*.xml
+
+      # always() to upload results also incase of failure
+      - name: Upload Go test results
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: Go-results-${{ matrix.go-version }}
+          path: TestResults-${{ matrix.go-version }}.json
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
