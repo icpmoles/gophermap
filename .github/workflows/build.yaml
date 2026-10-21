@@ -4,6 +4,8 @@ on: [push]
 
 permissions:
   contents: write
+  checks: write
+  pull-requests: write
 
 jobs:
   # avoids building in parallel if it's going to fail regardless
@@ -21,11 +23,16 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@v0.0.0-20200402091841-faad36e1d39b
+
       - name: Test
         run: |
-          set -o pipefail
-          go test -race -json ./... | tee TestResults-${{ matrix.go-version }}.json \
-            | jq -rj 'select(.Action == "output") | .Output'
+          gotestsum \
+            --format standard-verbose \
+            --junitfile "TestResults-${{ matrix.go-version }}.xml" \
+            -- -race ./...
+
 
       # always() to upload results also incase of failure
       - name: Upload Go test results

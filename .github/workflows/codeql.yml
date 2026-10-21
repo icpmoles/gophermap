@@ -37,12 +37,12 @@ jobs:
           build-mode: manual
           queries: security-extended
 
-      - name: Build Go project
+      - name: Build Go packages for CodeQL
         run: |
            go build \
             -ldflags="-s -w -X main.Version="TEST_VERSION"" \
             -trimpath -v \
-            -o cli_gophermap cmd/cli.go
+            -o cli_gophermap ./...
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
