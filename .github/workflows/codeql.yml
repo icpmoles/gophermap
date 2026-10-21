@@ -25,10 +25,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Setup Go ${{ matrix.go-version }}
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: ${{ matrix.go-version }}
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -38,7 +38,8 @@ jobs:
           queries: security-extended
 
       - name: Build Go project
-        run:  go build \
+        run: |
+           go build \
             -ldflags="-s -w -X main.Version="TEST_VERSION"" \
             -trimpath -v \
             -o cli_gophermap cmd/cli.go
