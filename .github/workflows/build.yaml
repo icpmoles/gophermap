@@ -8,12 +8,11 @@ permissions:
   pull-requests: write
 
 jobs:
-  # avoids building in parallel if it's going to fail regardless
   test-build:
     runs-on: ubuntu-latest  
     strategy:
       matrix:
-        go-version: ['1.27.2']
+        go-version: ['1.27.1']
         goos: [linux]
         goarch: [amd64]
     steps:
@@ -23,22 +22,11 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Install gotestsum
-        run: go install gotest.tools/gotestsum@v1.13.0
-
       - name: Test
         run: |
-          gotestsum \
-            --format standard-verbose \
-            --junitfile "TestResults-${{ matrix.go-version }}.xml" \
-            -- -race ./...
-
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d
-        if: always()
-        with:
-          files: |
-            TestResults-*.xml
+          set -o pipefail
+          go test -race -json ./... | tee TestResults-${{ matrix.go-version }}.json \
+            | jq -rj 'select(.Action == "output") | .Output'
 
       # always() to upload results also incase of failure
       - name: Upload Go test results
@@ -60,9 +48,7 @@ jobs:
             -o cli_gophermap cmd/cli.go
           
           ./cli_gophermap -h
-          ./cli_gophermap https://exmaple.com
-          
-          
+          ./cli_gophermap https://example.com
 
 
   build:
