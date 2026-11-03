@@ -1,0 +1,18 @@
+Source: gophermap
+Section: utils
+Priority: optional
+Maintainer: Iacopo Moles <my.iacopo@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               golang-1.27-go (>= 1.27.2)
+Standards-Version: 4.7.0
+Homepage: https://github.com/icpmoles/gophermap
+Vcs-Git: https://github.com/icpmoles/gophermap.git
+Vcs-Browser: https://github.com/icpmoles/gophermap
+Rules-Requires-Root: no
+
+Package: gophermap
+Architecture: any
+Depends: ${misc:Depends}
+Description: generate a sitemap of a directory
+ gophermap walks a directory of a static website and writes a sitemap.xml
+ for it, ready to be served next to the site.
