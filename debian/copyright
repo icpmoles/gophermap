@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gophermap
-Upstream-Contact: Iacopo Moles <my.iacopo@gmail.com>
+Upstream-Contact: Iacopo Moles <iacopo@icpmol.es>
 Source: https://github.com/icpmoles/gophermap
 
 Files: *
