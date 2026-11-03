@@ -5,6 +5,21 @@
 [![Casual Maintenance Intended](https://casuallymaintained.tech/badge.svg)](https://casuallymaintained.tech/)
 
 
+## Installation
+
+
+### Ubuntu
+
+```bash
+sudo add-apt-repository ppa:icpmoles/ppa
+sudo apt update
+sudo apt install gophermap
+```
+
+### Manual Installation
+
+Check the [releases](https://github.com/icpmoles/gophermap/releases) page for other builds.
+
 ## Usage
 
 Explores recursivelly the working directory or the specified folder looking for pdf, epub, md, txt files and creates a sitemap.xml in the working directory.
