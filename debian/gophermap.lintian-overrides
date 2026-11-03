@@ -1,0 +1,2 @@
+# Go binaries built with CGO_ENABLED=0 are static by design
+gophermap: statically-linked-binary [usr/bin/gophermap]

@@ -1,0 +1,33 @@
+#!/usr/bin/make -f
+
+# Launchpad builders have no network: use the packaged toolchain as-is and
+# never reach for the module proxy (the CLI only needs the standard library)
+GO ?= /usr/lib/go-1.27/bin/go
+export GOTOOLCHAIN := local
+export GOPROXY := off
+export CGO_ENABLED := 0
+export GOCACHE := $(CURDIR)/debian/.gocache
+export GOPATH := $(CURDIR)/debian/.gopath
+
+VERSION := $(shell dpkg-parsechangelog -SVersion)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(GO) build -v -trimpath -ldflags="-X main.Version=$(VERSION)" \
+		-o debian/build/gophermap ./cmd
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	$(GO) test ./...
+endif
+
+override_dh_auto_install:
+	install -D -m 0755 debian/build/gophermap debian/gophermap/usr/bin/gophermap
+
+override_dh_auto_clean:
+	rm -rf debian/build debian/.gocache debian/.gopath
+
+# dwz does not understand Go's DWARF
+override_dh_dwz:
