@@ -9,6 +9,13 @@ export CGO_ENABLED := 0
 export GOCACHE := $(CURDIR)/debian/.gocache
 export GOPATH := $(CURDIR)/debian/.gopath
 
+# Ubuntu builds amd64v2/v3/v4 variants with DEB_HOST_ARCH_VARIANT=amd64vN in
+# the environment (dpkg-buildflags adds -march=x86-64-vN for C): target the
+# same CPU level in Go. Plain amd64 builds keep Go's default, v1.
+ifneq (,$(filter amd64v%,$(DEB_HOST_ARCH_VARIANT)))
+export GOAMD64 := $(DEB_HOST_ARCH_VARIANT:amd64%=%)
+endif
+
 VERSION := $(shell dpkg-parsechangelog -SVersion)
 
 %:
