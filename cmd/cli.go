@@ -22,7 +22,7 @@ func print_usage() {
 	)
 
 	fmt.Fprintf(flag.CommandLine.Output(),
-		"Usage: %s [-directory <folder> -changefreq <freq> -output <output_file> -allow <ext> -now] <base_url>\n\n\t",
+		"Usage: %s [-wd <dir> -directory <folder> -exclude <folder> -changefreq <freq> -output <output_file> -allow <ext> -now] <base_url>\n\n\t",
 		os.Args[0])
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Where <base_url> should be in the form 'https://example.com'\n\n")
@@ -45,6 +45,7 @@ func (s *cliStringList) Set(value string) error {
 func main() {
 	/* Parse CLI parameters*/
 	// folderPtr := flag.String("directory", ".", "Directory to analyze")
+	workDir := flag.String("wd", ".", "working directory: -directory and the paths in the sitemap are relative to it (-output is not)")
 	sitemap := flag.String("output", "sitemap.xml", "output file")
 	changeFrequency := flag.String("changefreq", "never", "How often the file is esxpected to change, allowed values are: 'always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly' & 'never'")
 	now := flag.Bool("now", false, "use execution time as timestamp for <lastmod> field")
@@ -55,6 +56,9 @@ func main() {
 
 	var allowFolder cliStringList
 	flag.Var(&allowFolder, "directory", "Directory to analyze")
+
+	var excludeFolder cliStringList
+	flag.Var(&excludeFolder, "exclude", "directory to skip with all its content, relative to -wd (can be specified multiple times)")
 
 	flag.Usage = print_usage
 	flag.Parse()
@@ -77,6 +81,7 @@ func main() {
 	}
 	url := args[0]
 
+	// the output file stays relative to the shell's working directory, not to -wd
 	s_f, err := os.Create(*sitemap)
 	if err != nil {
 		log.Fatal("Error creating output file:\n\t", err.Error())
@@ -84,6 +89,8 @@ func main() {
 
 	start := time.Now()
 	err = gophermap.CreateSitemap(s_f, allowFolder, url,
+		gmtypes.WithRootDir(*workDir),
+		gmtypes.WithExcludeDirs(excludeFolder),
 		gmtypes.WithAllowList(allowExt),
 		gmtypes.WithUseExecutionTime(*now),
 		gmtypes.WithFrequencyFromString(*changeFrequency),

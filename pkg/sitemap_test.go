@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -458,6 +459,156 @@ func BenchmarkGetFlattenedFolder(b *testing.B) {
 				if err != nil {
 					b.Fatalf("GetFlattenedFolder() returned error: %v", err)
 				}
+			}
+		})
+	}
+}
+
+func TestCreateSitemapRootDir(t *testing.T) {
+	root := t.TempDir()
+	for _, path := range []string{"top.md", "inner/nested.md"} {
+		fullPath := filepath.Join(root, path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte(path), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name    string
+		explore []string
+		want    []string
+	}{
+		{"whole root", []string{"."}, []string{"inner/nested.md", "top.md"}},
+		{"relative subfolder", []string{"inner"}, []string{"inner/nested.md"}},
+		{"absolute subfolder", []string{filepath.Join(root, "inner")}, []string{"inner/nested.md"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := CreateSitemap(&output, test.explore, "https://example.com",
+				types.WithRootDir(root), types.WithAllowList([]string{"md"}))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var sitemap struct {
+				URLs []struct {
+					Location string `xml:"loc"`
+				} `xml:"url"`
+			}
+			if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
+				t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
+			}
+
+			if len(sitemap.URLs) != len(test.want) {
+				t.Fatalf("CreateSitemap() produced %d URLs, want %d", len(sitemap.URLs), len(test.want))
+			}
+			for i, want := range test.want {
+				if got := sitemap.URLs[i].Location; got != "https://example.com/"+want {
+					t.Errorf("URL location = %q, want %q", got, "https://example.com/"+want)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateSitemapRootDirRejectsOutsidePaths(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "root")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, explore := range []string{"..", filepath.Dir(root)} {
+		var output bytes.Buffer
+		err := CreateSitemap(&output, []string{explore}, "https://example.com", types.WithRootDir(root))
+		if err == nil || !strings.Contains(err.Error(), "outside of the root directory") {
+			t.Errorf("CreateSitemap(%q) error = %v, want an outside of the root directory error", explore, err)
+		}
+	}
+}
+
+func TestCreateSitemapExcludeDirs(t *testing.T) {
+	root := t.TempDir()
+	for _, path := range []string{
+		"top.md",
+		"docs/guide.md",
+		"docs/private/secret.md",
+		"drafts/wip.md",
+		"drafts2/kept.md", // shares a prefix with an excluded directory
+	} {
+		fullPath := filepath.Join(root, path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte(path), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name    string
+		explore []string
+		options []types.Option
+		want    []string
+	}{
+		{
+			"relative and absolute excludes inside the root",
+			[]string{"."},
+			[]types.Option{types.WithRootDir(root),
+				types.WithExcludeDirs([]string{"docs/private", filepath.Join(root, "drafts")})},
+			[]string{"docs/guide.md", "drafts2/kept.md", "top.md"},
+		},
+		{
+			"trailing separators are ignored",
+			[]string{"docs"},
+			[]types.Option{types.WithRootDir(root), types.WithExcludeDirs([]string{"docs/private/"})},
+			[]string{"docs/guide.md"},
+		},
+		{
+			"excluding the explored directory itself",
+			[]string{"docs", "drafts"},
+			[]types.Option{types.WithRootDir(root), types.WithExcludeDirs([]string{"docs"})},
+			[]string{"drafts/wip.md"},
+		},
+		{
+			"without a root directory",
+			[]string{root},
+			[]types.Option{types.WithExcludeDirs([]string{filepath.Join(root, "docs")})},
+			[]string{
+				filepath.ToSlash(filepath.Join(root, "drafts/wip.md")),
+				filepath.ToSlash(filepath.Join(root, "drafts2/kept.md")),
+				filepath.ToSlash(filepath.Join(root, "top.md")),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			options := append([]types.Option{types.WithAllowList([]string{"md"})}, test.options...)
+			if err := CreateSitemap(&output, test.explore, "https://example.com", options...); err != nil {
+				t.Fatal(err)
+			}
+
+			var sitemap struct {
+				URLs []struct {
+					Location string `xml:"loc"`
+				} `xml:"url"`
+			}
+			if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
+				t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
+			}
+
+			got := make([]string, len(sitemap.URLs))
+			for i, url := range sitemap.URLs {
+				got[i] = strings.TrimPrefix(url.Location, "https://example.com/")
+			}
+			if !slices.Equal(got, test.want) {
+				t.Errorf("CreateSitemap() paths = %q, want %q", got, test.want)
 			}
 		})
 	}
