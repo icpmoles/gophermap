@@ -2,6 +2,7 @@ package gophermap
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"uuid"
 
 	"github.com/icpmoles/gophermap/types"
 )
@@ -78,7 +78,7 @@ func generateRandomDirectory(size int) []pathTable {
 	for i := range size {
 
 		// allowedPath = i%2 == 1
-		filename := uuid.NewV4().String()
+		filename := rand.Text()
 
 		// if allowedPath {
 		allowedPath := pathTable{

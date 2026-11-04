@@ -2,7 +2,7 @@
 
 # Launchpad builders have no network: use the packaged toolchain as-is and
 # never reach for the module proxy (the CLI only needs the standard library)
-GO ?= /usr/lib/go-1.27/bin/go
+GO ?= go
 export GOTOOLCHAIN := local
 export GOPROXY := off
 export CGO_ENABLED := 0
