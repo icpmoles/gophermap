@@ -52,6 +52,7 @@ type Options struct {
 	UseExecutionTime bool
 	Frequency        SiteMapFrequency
 	Logger           *slog.Logger
+	RootDir          string
 }
 
 type Option func(*Options)
@@ -79,6 +80,14 @@ func WithFrequency(f SiteMapFrequency) Option {
 func WithLogger(logger *slog.Logger) Option {
 	return func(args *Options) {
 		args.Logger = logger
+	}
+}
+
+// directory the explored paths and the file names in the sitemap are relative to.
+// By default the explored paths are walked as given and the walked paths are used as file names
+func WithRootDir(dir string) Option {
+	return func(args *Options) {
+		args.RootDir = dir
 	}
 }
 

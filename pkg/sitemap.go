@@ -70,13 +70,22 @@ func needsXMLEscape(s string) bool {
 
 /*
 fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
+  - root: file names are made relative to it, if empty the walked path is used as-is
 */
-func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string, ff *types.FlattenedFolder, timestamp *time.Time) error {
+func explorerWrapper(path string, d fs.DirEntry, err error, root string, allowList *[]string, ff *types.FlattenedFolder, timestamp *time.Time) error {
 	if err != nil {
 		return fmt.Errorf("Walking %q: %w", path, err)
 	}
 
 	if !d.IsDir() && isAllowedFile(path, allowList) {
+		name := path
+		if root != "" {
+			name, err = filepath.Rel(root, path)
+			if err != nil {
+				return fmt.Errorf("Making %q relative to %q: %w", path, root, err)
+			}
+		}
+
 		var LastModTimestamp time.Time
 		if timestamp == nil {
 			// only stat the file when we actually need its modification time
@@ -90,7 +99,7 @@ func explorerWrapper(path string, d fs.DirEntry, err error, allowList *[]string,
 		}
 
 		file := types.File{
-			Name:    filepath.ToSlash(escapeXML(path)),
+			Name:    filepath.ToSlash(escapeXML(name)),
 			LastMod: LastModTimestamp,
 		}
 
@@ -106,10 +115,29 @@ Returns list of files relative to path.
     from the filesystem
 */
 func GetFlattenedFolder(explorePath string, allowList []string, timestamp *time.Time) (ff types.FlattenedFolder, err error) {
+	return getFlattenedFolder("", explorePath, allowList, timestamp)
+}
 
-	err = filepath.WalkDir(explorePath,
+/*
+Like GetFlattenedFolder, with explorePath and the returned file names relative to root.
+root must be absolute (or empty, to use explorePath and the walked paths as-is).
+An absolute explorePath is accepted as long as it is inside root
+*/
+func getFlattenedFolder(root string, explorePath string, allowList []string, timestamp *time.Time) (ff types.FlattenedFolder, err error) {
+	walkPath := explorePath
+	if root != "" {
+		if !filepath.IsAbs(walkPath) {
+			walkPath = filepath.Join(root, walkPath)
+		}
+		rel, err := filepath.Rel(root, walkPath)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return ff, fmt.Errorf("Error exploring target directory %q:\n\toutside of the root directory %q", explorePath, root)
+		}
+	}
+
+	err = filepath.WalkDir(walkPath,
 		func(path string, d fs.DirEntry, err error) error {
-			return explorerWrapper(path, d, err, &allowList, &ff, timestamp)
+			return explorerWrapper(path, d, err, root, &allowList, &ff, timestamp)
 		})
 
 	if err != nil {
@@ -122,7 +150,7 @@ func GetFlattenedFolder(explorePath string, allowList []string, timestamp *time.
 /*
 CreateSitemap:
 
-- explores the path(s) provided with explorePath
+- explores the path(s) provided with explorePath, relative to the root directory if set (see types.WithRootDir)
 
 - filters all the files with extension that respect the allowList. (See ExtensionsAllowList for an example)
 
@@ -144,7 +172,17 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		setter(args)
 	}
 
-	args.Logger.Info("exploring", "paths", explorePath)
+	// Rel needs both paths absolute (or both relative): pin the root once for every explored path
+	root := args.RootDir
+	if root != "" {
+		var err error
+		root, err = filepath.Abs(root)
+		if err != nil {
+			return fmt.Errorf("Error resolving root directory %q: %w", args.RootDir, err)
+		}
+	}
+
+	args.Logger.Info("exploring", "root", root, "paths", explorePath)
 
 	lowerAllowList := make([]string, len(args.AllowList))
 
@@ -167,7 +205,7 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 	var wg sync.WaitGroup
 	for i, v := range explorePath {
 		wg.Go(func() {
-			results[i], errs[i] = GetFlattenedFolder(v, lowerAllowList, timestamp)
+			results[i], errs[i] = getFlattenedFolder(root, v, lowerAllowList, timestamp)
 		})
 	}
 	wg.Wait()

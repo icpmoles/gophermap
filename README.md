@@ -34,7 +34,7 @@ gophermap -folder assets -o public/sitemap.xml -allow html -allow xml -allow xls
 
 gophermap - Generate sitemap of directory
 
-Usage: gophermap [-directory <folder> -changefreq <freq> -output <output_file> -now -allow <ext>] <base_url>
+Usage: gophermap [-wd <dir> -directory <folder> -changefreq <freq> -output <output_file> -now -allow <ext>] <base_url>
 
         Where <base_url> should be in the form 'https://example.com'
 
@@ -49,6 +49,8 @@ Options:
         use execution time as timestamp for <lastmod> field
   -output string
         output file (default "sitemap.xml")
+  -wd string
+        working directory: -directory and the paths in the sitemap are relative to it (-output is not) (default ".")
 ```
 
 ### Arguments

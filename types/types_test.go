@@ -12,6 +12,7 @@ func TestOptions(t *testing.T) {
 		WithAllowList([]string{"foo", "bar"}),
 		WithUseExecutionTime(true),
 		WithFrequency(Weekly),
+		WithRootDir("site"),
 	}
 
 	for _, option := range options {
@@ -22,6 +23,7 @@ func TestOptions(t *testing.T) {
 		AllowList:        []string{"foo", "bar"},
 		UseExecutionTime: true,
 		Frequency:        Weekly,
+		RootDir:          "site",
 	}
 
 	if !reflect.DeepEqual(opts, want) {

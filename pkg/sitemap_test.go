@@ -462,3 +462,70 @@ func BenchmarkGetFlattenedFolder(b *testing.B) {
 		})
 	}
 }
+
+func TestCreateSitemapRootDir(t *testing.T) {
+	root := t.TempDir()
+	for _, path := range []string{"top.md", "inner/nested.md"} {
+		fullPath := filepath.Join(root, path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte(path), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name    string
+		explore []string
+		want    []string
+	}{
+		{"whole root", []string{"."}, []string{"inner/nested.md", "top.md"}},
+		{"relative subfolder", []string{"inner"}, []string{"inner/nested.md"}},
+		{"absolute subfolder", []string{filepath.Join(root, "inner")}, []string{"inner/nested.md"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := CreateSitemap(&output, test.explore, "https://example.com",
+				types.WithRootDir(root), types.WithAllowList([]string{"md"}))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var sitemap struct {
+				URLs []struct {
+					Location string `xml:"loc"`
+				} `xml:"url"`
+			}
+			if err := xml.Unmarshal(output.Bytes(), &sitemap); err != nil {
+				t.Fatalf("CreateSitemap() produced invalid XML: %v", err)
+			}
+
+			if len(sitemap.URLs) != len(test.want) {
+				t.Fatalf("CreateSitemap() produced %d URLs, want %d", len(sitemap.URLs), len(test.want))
+			}
+			for i, want := range test.want {
+				if got := sitemap.URLs[i].Location; got != "https://example.com/"+want {
+					t.Errorf("URL location = %q, want %q", got, "https://example.com/"+want)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateSitemapRootDirRejectsOutsidePaths(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "root")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, explore := range []string{"..", filepath.Dir(root)} {
+		var output bytes.Buffer
+		err := CreateSitemap(&output, []string{explore}, "https://example.com", types.WithRootDir(root))
+		if err == nil || !strings.Contains(err.Error(), "outside of the root directory") {
+			t.Errorf("CreateSitemap(%q) error = %v, want an outside of the root directory error", explore, err)
+		}
+	}
+}
