@@ -92,7 +92,7 @@ Specifically for Linux there are additional ARMv5/ARMv6/ARMv7 builds meant for l
 
 ### How to build
 
-Both methods require go 1.27+
+Both methods require go 1.26+
 
 **With Mage**
 

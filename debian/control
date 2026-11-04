@@ -3,7 +3,7 @@ Section: utils
 Priority: optional
 Maintainer: Iacopo Moles <my.iacopo@gmail.com>
 Build-Depends: debhelper-compat (= 13),
-               golang-1.27-go (>= 1.27.2)
+               golang-go (>= 2:1.26~)
 Standards-Version: 4.7.0
 Homepage: https://github.com/icpmoles/gophermap
 Vcs-Git: https://github.com/icpmoles/gophermap.git
