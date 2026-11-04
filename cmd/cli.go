@@ -22,7 +22,7 @@ func print_usage() {
 	)
 
 	fmt.Fprintf(flag.CommandLine.Output(),
-		"Usage: %s [-wd <dir> -directory <folder> -changefreq <freq> -output <output_file> -allow <ext> -now] <base_url>\n\n\t",
+		"Usage: %s [-wd <dir> -directory <folder> -exclude <folder> -changefreq <freq> -output <output_file> -allow <ext> -now] <base_url>\n\n\t",
 		os.Args[0])
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Where <base_url> should be in the form 'https://example.com'\n\n")
@@ -57,6 +57,9 @@ func main() {
 	var allowFolder cliStringList
 	flag.Var(&allowFolder, "directory", "Directory to analyze")
 
+	var excludeFolder cliStringList
+	flag.Var(&excludeFolder, "exclude", "directory to skip with all its content, relative to -wd (can be specified multiple times)")
+
 	flag.Usage = print_usage
 	flag.Parse()
 
@@ -87,6 +90,7 @@ func main() {
 	start := time.Now()
 	err = gophermap.CreateSitemap(s_f, allowFolder, url,
 		gmtypes.WithRootDir(*workDir),
+		gmtypes.WithExcludeDirs(excludeFolder),
 		gmtypes.WithAllowList(allowExt),
 		gmtypes.WithUseExecutionTime(*now),
 		gmtypes.WithFrequencyFromString(*changeFrequency),

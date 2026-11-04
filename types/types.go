@@ -53,6 +53,7 @@ type Options struct {
 	Frequency        SiteMapFrequency
 	Logger           *slog.Logger
 	RootDir          string
+	ExcludeDirs      []string
 }
 
 type Option func(*Options)
@@ -88,6 +89,15 @@ func WithLogger(logger *slog.Logger) Option {
 func WithRootDir(dir string) Option {
 	return func(args *Options) {
 		args.RootDir = dir
+	}
+}
+
+// directories to skip while exploring, together with everything inside them.
+// Relative paths are resolved like the explored paths: against the root directory if set,
+// against the current working directory otherwise
+func WithExcludeDirs(dirs []string) Option {
+	return func(args *Options) {
+		args.ExcludeDirs = dirs
 	}
 }
 

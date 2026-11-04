@@ -71,10 +71,25 @@ func needsXMLEscape(s string) bool {
 /*
 fs.WalkDirFunc doesn't allow for custom arguments, so we use a wrapper that captures the function context
   - root: file names are made relative to it, if empty the walked path is used as-is
+  - excluded: absolute paths of the directories to skip
 */
-func explorerWrapper(path string, d fs.DirEntry, err error, root string, allowList *[]string, ff *types.FlattenedFolder, timestamp *time.Time) error {
+func explorerWrapper(path string, d fs.DirEntry, err error, root string, excluded map[string]struct{}, allowList *[]string, ff *types.FlattenedFolder, timestamp *time.Time) error {
 	if err != nil {
 		return fmt.Errorf("Walking %q: %w", path, err)
+	}
+
+	if d.IsDir() && len(excluded) > 0 {
+		// walked paths are already absolute when root is set
+		absPath := path
+		if !filepath.IsAbs(absPath) {
+			absPath, err = filepath.Abs(path)
+			if err != nil {
+				return fmt.Errorf("Resolving %q: %w", path, err)
+			}
+		}
+		if _, skip := excluded[absPath]; skip {
+			return fs.SkipDir
+		}
 	}
 
 	if !d.IsDir() && isAllowedFile(path, allowList) {
@@ -115,15 +130,16 @@ Returns list of files relative to path.
     from the filesystem
 */
 func GetFlattenedFolder(explorePath string, allowList []string, timestamp *time.Time) (ff types.FlattenedFolder, err error) {
-	return getFlattenedFolder("", explorePath, allowList, timestamp)
+	return getFlattenedFolder("", nil, explorePath, allowList, timestamp)
 }
 
 /*
 Like GetFlattenedFolder, with explorePath and the returned file names relative to root.
 root must be absolute (or empty, to use explorePath and the walked paths as-is).
-An absolute explorePath is accepted as long as it is inside root
+An absolute explorePath is accepted as long as it is inside root.
+Directories whose absolute path is in excluded are skipped with all their content
 */
-func getFlattenedFolder(root string, explorePath string, allowList []string, timestamp *time.Time) (ff types.FlattenedFolder, err error) {
+func getFlattenedFolder(root string, excluded map[string]struct{}, explorePath string, allowList []string, timestamp *time.Time) (ff types.FlattenedFolder, err error) {
 	walkPath := explorePath
 	if root != "" {
 		if !filepath.IsAbs(walkPath) {
@@ -137,7 +153,7 @@ func getFlattenedFolder(root string, explorePath string, allowList []string, tim
 
 	err = filepath.WalkDir(walkPath,
 		func(path string, d fs.DirEntry, err error) error {
-			return explorerWrapper(path, d, err, root, &allowList, &ff, timestamp)
+			return explorerWrapper(path, d, err, root, excluded, &allowList, &ff, timestamp)
 		})
 
 	if err != nil {
@@ -151,6 +167,8 @@ func getFlattenedFolder(root string, explorePath string, allowList []string, tim
 CreateSitemap:
 
 - explores the path(s) provided with explorePath, relative to the root directory if set (see types.WithRootDir)
+
+- skips the excluded directories (see types.WithExcludeDirs)
 
 - filters all the files with extension that respect the allowList. (See ExtensionsAllowList for an example)
 
@@ -182,7 +200,25 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		}
 	}
 
-	args.Logger.Info("exploring", "root", root, "paths", explorePath)
+	// resolve the excluded directories once, the walk compares absolute paths
+	excluded := make(map[string]struct{}, len(args.ExcludeDirs))
+	for _, dir := range args.ExcludeDirs {
+		absDir := dir
+		if !filepath.IsAbs(absDir) {
+			if root != "" {
+				absDir = filepath.Join(root, absDir)
+			} else {
+				var err error
+				absDir, err = filepath.Abs(absDir)
+				if err != nil {
+					return fmt.Errorf("Error resolving excluded directory %q: %w", dir, err)
+				}
+			}
+		}
+		excluded[filepath.Clean(absDir)] = struct{}{}
+	}
+
+	args.Logger.Info("exploring", "root", root, "paths", explorePath, "excluded", args.ExcludeDirs)
 
 	lowerAllowList := make([]string, len(args.AllowList))
 
@@ -205,7 +241,7 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 	var wg sync.WaitGroup
 	for i, v := range explorePath {
 		wg.Go(func() {
-			results[i], errs[i] = getFlattenedFolder(root, v, lowerAllowList, timestamp)
+			results[i], errs[i] = getFlattenedFolder(root, excluded, v, lowerAllowList, timestamp)
 		})
 	}
 	wg.Wait()
