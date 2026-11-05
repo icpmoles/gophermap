@@ -274,6 +274,11 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		ChangeFreq: args.Frequency.String(),
 	}
 
+	return writeSitemapTemplate(wr, site)
+}
+
+// Renders site with the embedded text/template. See writeSitemapXML for the encoding/xml version
+func writeSitemapTemplate(wr io.Writer, site types.SiteStructure) error {
 	ts, err := template.ParseFS(assets.Templates, "templates/sitemap.tmpl.xml")
 	if err != nil {
 		return fmt.Errorf("Error parsing embedded XML template: %w", err)
@@ -284,5 +289,5 @@ func CreateSitemap(wr io.Writer, explorePath []string, baseURL string, setters .
 		return fmt.Errorf("Error executing XML template: %w", err)
 	}
 
-	return err
+	return nil
 }
