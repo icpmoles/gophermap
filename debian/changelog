@@ -1,3 +1,9 @@
+gophermap (0.6.0) unstable; urgency=medium
+
+  * Speed improvements (around 2x) for XML generation.
+
+ -- Iacopo Moles <my.iacopo@gmail.com>  Wed, 05 Nov 2026 15:27:06 +0100
+
 gophermap (0.5.0) unstable; urgency=medium
 
   * New -wd and -exclude flags; require Go 1.26.
